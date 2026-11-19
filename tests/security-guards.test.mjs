@@ -114,3 +114,46 @@ describe("finding #9 — CSP hardening", () => {
     assert.deepEqual(bad, [], `eval/new Function found in: ${bad.join(", ")}`);
   });
 });
+
+describe("admin users route — real error messages (2026-11-19)", () => {
+  it("surfaces a PostgREST plain-object error message instead of 'failed'", () => {
+    const route = src("app/api/admin/users/route.ts");
+    // PostgREST errors are plain objects with a `message` field, not Error
+    // instances — a CHECK violation once surfaced as the bare word "failed".
+    // The catch now uses the shared errorMessage helper (see admin-auth.ts).
+    assert.match(route, /errorMessage\(e\)/, "catch must use the shared errorMessage helper");
+    assert.doesNotMatch(
+      route,
+      /e instanceof Error \? e\.message : "failed"/,
+      "catch must not fall back to the bare 'failed' literal",
+    );
+  });
+});
+
+describe("audit logging coverage — finding L11 (2026-11-19)", () => {
+  it("signup route audits registrations", () => {
+    const route = src("app/api/auth/signup/route.ts");
+    assert.match(route, /logAudit\(serviceSupabase\(\), data\.user\.id, "create:user"/, "signup must log create:user after a successful signUp");
+  });
+
+  it("architecture route audits draft creation", () => {
+    const route = src("app/api/ai/architecture/route.ts");
+    assert.match(route, /logAudit\(supabase, user\.id, 'create:architecture_draft'/, "draft persist must log create:architecture_draft");
+  });
+
+  it("no admin catch still swallows PostgREST errors as bare 'failed'", () => {
+    const bad = [];
+    const walk = (dir) => {
+      for (const name of readdirSync(dir)) {
+        const p = join(dir, name);
+        if (statSync(p).isDirectory()) walk(p);
+        else if (/\.(ts|tsx)$/.test(name)) {
+          const code = readFileSync(p, "utf8");
+          if (/e instanceof Error \? e\.message : "failed"/.test(code)) bad.push(p);
+        }
+      }
+    };
+    walk(SRC);
+    assert.deepEqual(bad, [], `bare 'failed' fallback remains in: ${bad.join(", ")}`);
+  });
+});

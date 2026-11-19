@@ -14,6 +14,7 @@
 // confirm via email before signing in.
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { serviceSupabase, logAudit } from "@/lib/admin-auth";
 import { isRateLimited } from "@/lib/rate-limit";
 import { verifyRecaptcha } from "@/lib/recaptcha";
 
@@ -86,7 +87,7 @@ export async function POST(req: NextRequest) {
   // 3. Sign up (server client; confirmation email enforced by Auth config).
   const origin = new URL(req.url).origin;
   const supabase = await createClient();
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
@@ -107,6 +108,12 @@ export async function POST(req: NextRequest) {
       { error: "Could not create the account. Please try again." },
       { status: 400 },
     );
+  }
+
+  // L11 (2026-11-19): audit registrations — signups previously left no
+  // audit row. Best-effort: logAudit never throws.
+  if (data.user) {
+    await logAudit(serviceSupabase(), data.user.id, "create:user", "user", data.user.id, { email });
   }
 
   return NextResponse.json({

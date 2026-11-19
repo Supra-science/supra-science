@@ -86,7 +86,7 @@ describe("public site brand guards", () => {
 
   it("sitemap covers all new public routes", () => {
     const src = readFileSync(join(APP, "sitemap.xml", "route.ts"), "utf8");
-    // Final URLs only: non-/ar, non-/en paths 307-redirect to their /ar twin for
+    // Final URLs only: non-/ar, non-/en paths 301-redirect to their /ar twin for
     // cookie-less visitors (including crawlers), and /ar/ 308-redirects
     // to /ar, so they must not be listed.
     for (const r of [

@@ -9,10 +9,10 @@ import { isAdminUser } from "@/lib/admin-check";
  * Recovered from the live Nov-8 deployment bundle (middleware chunk):
  * the 13 public paths below are served in Arabic by default. When the
  * `ss-lang` cookie is not exactly "en", the visitor is redirected to the
- * `/ar…` version (root → `/ar`, 301 permanent since 2026-11-19, audit
- * finding L10; the other locale redirects stay 307 temporary). Verified
- * live: `GET /` without the cookie returns 307 to `/ar` (2026-11-09) —
- * now 301 after this change, verify live after the next deploy.
+ * `/ar…` version with a permanent 301 (root → `/ar` since 2026-11-19,
+ * audit finding L10; all other locale redirects 301 since 2026-11-19,
+ * fix 2). The redirect carries `Vary: Cookie` so a later language
+ * choice is still honoured. Verified live after the next deploy.
  *
  * Every other request gets an `x-pathname` header (used by the 404 page
  * to render the right language) and continues to the Supabase session
@@ -156,10 +156,15 @@ export async function middleware(request: NextRequest) {
   ) {
     const url = request.nextUrl.clone();
     url.pathname = pathname === "/" ? "/ar" : `/ar${pathname}`;
-    // L10 (2026-11-19): the root default is permanent (301) — Arabic is
-    // the permanent default locale. The other locale redirects stay
-    // temporary (307) so a later language choice is still honoured there.
-    return NextResponse.redirect(url, pathname === "/" ? 301 : 307);
+    // Fix 2 (2026-11-19, audit L10 extension): every locale redirect is
+    // permanent (301) — the move to the /ar twin is permanent, not
+    // temporary — so Google consolidates signals on the final URL.
+    // `Vary: Cookie` keeps a later language choice honoured: the 301 is
+    // cached per cookie state, so a visitor who later chooses English
+    // (ss-lang=en) is not served the cached redirect to /ar.
+    const res = NextResponse.redirect(url, 301);
+    res.headers.set("Vary", "Cookie");
+    return res;
   }
 
   // Per-request CSP nonce (finding #9). Next.js reads x-nonce and adds

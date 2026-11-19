@@ -9,7 +9,7 @@
 // pass requireAdmin(). Does NOT write an audit row.
 
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin, serviceSupabase } from "@/lib/admin-auth";
+import { requireAdmin, serviceSupabase, errorMessage } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -54,7 +54,7 @@ export async function GET() {
     if (error) throw error;
     return NextResponse.json({ ok: true, services: data });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "failed";
+    const msg = errorMessage(e);
     return NextResponse.json({ ok: false, error: msg.slice(0, 160) }, { status: 503 });
   }
 }
@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
     if (error) throw error;
     return NextResponse.json({ ok: true, service: data });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "failed";
+    const msg = errorMessage(e);
     return NextResponse.json({ ok: false, error: msg.slice(0, 160) }, { status: 503 });
   }
 }
@@ -93,7 +93,7 @@ export async function PATCH(req: NextRequest) {
     if (error) throw error;
     return NextResponse.json({ ok: true, service: data });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "failed";
+    const msg = errorMessage(e);
     return NextResponse.json({ ok: false, error: msg.slice(0, 160) }, { status: 503 });
   }
 }
@@ -110,7 +110,7 @@ export async function DELETE(req: NextRequest) {
     if (error) throw error;
     return NextResponse.json({ ok: true });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "failed";
+    const msg = errorMessage(e);
     return NextResponse.json({ ok: false, error: msg.slice(0, 160) }, { status: 503 });
   }
 }

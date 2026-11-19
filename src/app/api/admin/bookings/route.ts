@@ -8,7 +8,7 @@
 // change writes an audit row `update:consultation_bookings`.
 
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin, serviceSupabase, logAudit } from "@/lib/admin-auth";
+import { requireAdmin, serviceSupabase, logAudit, errorMessage } from "@/lib/admin-auth";
 // TODO(RECONSTRUCTION-GAP): the bundle only shows the minified export name
 // ("s") of the calendar helper in src_lib_calendar_ts; the source export
 // name is reconstructed here as cancelCalendarEvent. The helper DELETEs
@@ -60,7 +60,7 @@ export async function PATCH(req: NextRequest) {
     await logAudit(admin, auth.user.id, "update:consultation_bookings", "booking", id, { status });
     return NextResponse.json({ ok: true, row: data });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "failed";
+    const msg = errorMessage(e);
     return NextResponse.json({ ok: false, error: msg.slice(0, 160) }, { status: 503 });
   }
 }

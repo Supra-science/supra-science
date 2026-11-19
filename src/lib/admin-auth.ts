@@ -38,6 +38,20 @@ export async function logAudit(
   }
 }
 
+/**
+ * Error message extractor (2026-11-19): PostgREST errors are plain objects
+ * with a `message` field, not Error instances — reading only Error.message
+ * turned real failures into the bare word "failed" (first seen on the
+ * role-change route). Use this in every admin-route catch.
+ */
+export function errorMessage(e: unknown): string {
+  if (e instanceof Error) return e.message;
+  if (typeof e === "object" && e !== null && "message" in e) {
+    return String((e as { message: unknown }).message);
+  }
+  return "failed";
+}
+
 /** Verify the caller is an admin. Returns { user } or { error: NextResponse }. */
 export async function requireAdmin() {
   const supabase = await createClient();

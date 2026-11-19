@@ -36,6 +36,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createClient as createServerSupabase } from '@/lib/supabase/server';
+import { logAudit } from '@/lib/admin-auth';
 import { isRateLimited } from '@/lib/rate-limit';
 import { generateJsonWithGemini, generateWithWorkersAI } from '@/lib/ai-engine';
 
@@ -258,6 +259,9 @@ export async function POST(req: NextRequest) {
       if (!error && data) {
         draftId = data.id as string;
         persisted = true;
+        // L11 (2026-11-19): audit draft creation — previously only admin
+        // status changes were logged, so new drafts left no audit row.
+        await logAudit(supabase, user.id, 'create:architecture_draft', 'architecture_draft', draftId, { title: brief.title });
       } else if (error) {
         console.error('architecture draft persist failed:', error.message);
       }

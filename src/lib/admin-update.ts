@@ -12,7 +12,7 @@
 // below is exact.
 
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin, serviceSupabase, logAudit } from "@/lib/admin-auth";
+import { requireAdmin, serviceSupabase, logAudit, errorMessage } from "@/lib/admin-auth";
 
 export type AdminUpdateOptions = {
   /** Supabase table to update. */
@@ -71,7 +71,7 @@ export async function handleAdminStatusUpdate(req: NextRequest, options: AdminUp
     await logAudit(admin, auth.user.id, `update:${options.table}`, options.entity, id, patch);
     return NextResponse.json({ ok: true, row: data });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "failed";
+    const msg = errorMessage(e);
     return NextResponse.json({ ok: false, error: msg.slice(0, 160) }, { status: 503 });
   }
 }

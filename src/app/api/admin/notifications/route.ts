@@ -6,7 +6,7 @@
 // (body.is_read === true) and writes an audit row `update:notifications`.
 
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin, serviceSupabase, logAudit } from "@/lib/admin-auth";
+import { requireAdmin, serviceSupabase, logAudit, errorMessage } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +31,7 @@ export async function PATCH(req: NextRequest) {
     await logAudit(admin, auth.user.id, "update:notifications", "notification", id, { is_read: isRead });
     return NextResponse.json({ ok: true, row: data });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "failed";
+    const msg = errorMessage(e);
     return NextResponse.json({ ok: false, error: msg.slice(0, 160) }, { status: 503 });
   }
 }
