@@ -1,0 +1,165 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Cairo:wght@600;700;800&family=Noto+Sans+Arabic:wght@400;500;600;700&family=Tajawal:wght@400;500;700;800&family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+/* Brand Identity Guide palette (2026-11-13, replaces Connected Titanium):
+   --navy #0B132B Cosmic Navy 60% (backgrounds, headers, primary text),
+   --blue/--cyan/--gold #06B6D4 Supra Cyan 30% (subheadings, icons, borders),
+   --gold2 #6366F1 Ultraviolet Indigo 10% (CTAs, links, key results),
+   --ink #F8FAFC Slate Alabaster, body text #1E293B Deep Slate.
+   --gold/--gold2 are LEGACY names kept so existing className="gold" and
+   var(--gold) usages keep working. No gold remains. */
+:root{--navy:#0B132B;--blue:#06B6D4;--cyan:#06B6D4;--gold:#06B6D4;--gold2:#6366F1;--ink:#F8FAFC;--panel:#ffffff;--muted:#454f5c}
+*{box-sizing:border-box}html,body{min-height:100%;margin:0}body{background:var(--ink);color:#1E293B;font-family:Inter,'Noto Sans Arabic',Tajawal,sans-serif;font-weight:500}
+[dir="rtl"] body,[dir="rtl"]{font-family:'Noto Sans Arabic',Tajawal,'IBM Plex Sans Arabic',Inter,sans-serif}
+/* Strong formal headings (per the brand proposal): geometric Arabic face at 800 */
+h1,h2,h3{font-family:'Space Grotesk',Inter,'IBM Plex Sans Arabic',sans-serif;font-weight:800}
+[dir="rtl"] h1,[dir="rtl"] h2,[dir="rtl"] h3{font-family:'IBM Plex Sans Arabic',Cairo,Tajawal,sans-serif}
+a{color:inherit;text-decoration:none}button,input{font:inherit}
+.shell{min-height:100vh;background:radial-gradient(ellipse at 75% 0%,rgba(6,182,212,.10),transparent 36%),var(--ink)}
+.nav{height:76px;border-bottom:1px solid rgba(11,19,43,.14);display:flex;align-items:center;justify-content:space-between;padding:0 clamp(20px,6vw,88px);position:sticky;top:0;z-index:60;background:rgba(11,19,43,.97);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.nav .muted{color:#c7d6e8}
+.nav-links{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.nav-link{position:relative;padding:6px 2px;transition:color .2s}
+.nav-link:hover{color:#06B6D4}
+.menu-btn{display:none;background:transparent;border:1px solid rgba(6,182,212,.6);border-radius:10px;width:44px;height:44px;cursor:pointer;place-items:center}
+.menu-btn span{display:block;width:20px;height:2px;background:#06B6D4;border-radius:2px;margin:2.5px 0}
+.mobile-menu{display:none}
+@media(max-width:940px){
+  .nav-links{display:none}
+  .menu-btn{display:grid}
+  .mobile-menu{display:grid;gap:4px;position:absolute;top:calc(100% + 1px);inset-inline:16px;background:#ffffff;border:1px solid rgba(6,182,212,.4);border-radius:16px;padding:14px;box-shadow:0 24px 60px rgba(11,19,43,.18)}
+  .mobile-menu a{padding:12px 14px;border-radius:10px;font-size:15px;font-weight:600;color:#1E293B}
+  .mobile-menu a:hover{background:rgba(6,182,212,.08)}
+  .mobile-menu .btn{margin-top:8px;text-align:center}
+}
+/* ---- design system: rhythm, cards, buttons ---- */
+.section{max-width:1180px;margin:auto;padding:72px 24px}
+.section-head{max-width:720px;margin-bottom:34px}
+.section-head h2{font-size:clamp(30px,4vw,42px);margin:14px 0 10px;letter-spacing:-.02em;line-height:1.15;color:var(--navy)}
+.tile{transition:transform .25s ease,border-color .25s ease,box-shadow .25s ease}
+a.tile:hover{transform:translateY(-4px);border-color:rgba(6,182,212,.6);box-shadow:0 18px 44px rgba(11,19,43,.14)}
+.btn{transition:transform .2s ease,box-shadow .2s ease,background .2s ease}
+.btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 12px 28px rgba(99,102,241,.35)}
+.btn.secondary:hover:not(:disabled){background:rgba(6,182,212,.10);box-shadow:none}
+/* subtle engineering dot texture over the off-white base + cyan glow */
+.shell{background-color:var(--ink);background-image:radial-gradient(rgba(11,19,43,.06) 1px,transparent 1.4px),radial-gradient(ellipse at 75% 0%,rgba(6,182,212,.10),transparent 36%);background-size:30px 30px,cover;background-repeat:repeat,no-repeat}
+/* hero visual */
+.hero-visual{width:100%;height:auto;border-radius:22px;border:1px solid rgba(6,182,212,.35);box-shadow:0 24px 80px rgba(11,19,43,.14);background:#ffffff}
+.pulse{animation:hvpulse 2.8s ease-in-out infinite}
+.pulse-2{animation-delay:.9s}
+.pulse-3{animation-delay:1.7s}
+@keyframes hvpulse{0%,100%{opacity:.2}50%{opacity:1}}
+@media (prefers-reduced-motion: reduce){.pulse{animation:none}}
+/* stat strip */
+.statstrip{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:34px}
+.statstrip .stat{text-align:center}
+@media(max-width:800px){.statstrip{grid-template-columns:repeat(2,1fr)}}
+/* channel cards */
+.channels{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:22px}
+@media(max-width:700px){.channels{grid-template-columns:1fr}}
+.channel{display:flex;align-items:center;gap:14px;padding:18px 20px;border:1px solid rgba(11,19,43,.10);border-radius:14px;background:#ffffff;transition:border-color .2s,transform .2s}
+.channel:hover{border-color:rgba(6,182,212,.6);transform:translateY(-2px)}
+.channel .ic{width:42px;height:42px;flex:none;display:grid;place-items:center;border:1px solid var(--gold);border-radius:12px;color:var(--blue);font-weight:800}
+.channel b{display:block;color:var(--navy)}
+.channel span{font-size:12.5px;color:var(--muted)}
+/* responsive grids */
+.tiles-2{display:grid;gap:14px;grid-template-columns:repeat(2,1fr)}
+@media(max-width:700px){.tiles-2{grid-template-columns:1fr}}
+.tiles-4{display:grid;gap:14px;grid-template-columns:repeat(4,1fr)}
+@media(max-width:1100px){.tiles-4{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:620px){.tiles-4{grid-template-columns:1fr}}
+@media(max-width:940px){.hero{grid-template-columns:1fr;padding:64px 20px 40px}}
+@media(max-width:940px){.hero h1{font-size:clamp(32px,8vw,44px)}}
+.brand{display:flex;align-items:center;gap:12px;font-family:'Space Grotesk',Montserrat,'IBM Plex Sans Arabic',Inter,sans-serif;font-weight:800;letter-spacing:.12em;direction:ltr;unicode-bidi:isolate}.brandmark{width:38px;height:38px;border:1px solid var(--gold);color:var(--gold2);display:grid;place-items:center;border-radius:12px;font-weight:800;background:#ffffff}
+/* The nav bar is navy: the wordmark must be white there (SUPRA inherits the
+   dark body color and .gold is navy, both invisible on navy). Footer keeps
+   the dark wordmark on its white background. */
+.nav .brand{color:#ffffff}.nav .brand .gold{color:#ffffff}
+/* Secondary buttons are dark-on-transparent (designed for white pages) —
+   inside the navy nav they need white text and a light border, otherwise
+   "Back to workspace" / "Sign out" are invisible. */
+.nav .btn.secondary{color:#ffffff;border-color:rgba(255,255,255,.55)}
+.nav .btn.secondary:hover:not(:disabled){background:rgba(255,255,255,.12);box-shadow:none}
+.brand-sep{color:var(--cyan)}
+.gold{color:var(--gold2)}.btn{border:1px solid #6366F1;background:linear-gradient(135deg,#818cf8,#6366F1);color:#ffffff;padding:12px 18px;border-radius:10px;font-weight:800;cursor:pointer;display:inline-flex;justify-content:center;align-items:center;gap:8px}
+.btn.secondary{background:transparent;color:var(--gold2)}.btn:disabled{opacity:.55;cursor:not-allowed}
+.hero{max-width:1180px;margin:auto;padding:100px 24px 80px;display:grid;grid-template-columns:1.15fr .85fr;gap:60px;align-items:center}
+.eyebrow{color:var(--gold2);letter-spacing:.2em;text-transform:uppercase;font-size:11px;font-weight:800}
+h1{font-size:clamp(42px,6vw,72px);line-height:1.04;letter-spacing:-.05em;margin:22px 0}.lead{color:#2b313a;line-height:1.9;max-width:620px}
+.panel{background:linear-gradient(145deg,#ffffff,#f2f5f8);border:1px solid rgba(11,19,43,.14);border-radius:22px;padding:30px;box-shadow:0 24px 80px rgba(11,19,43,.12)}
+.statgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:22px}.stat{padding:18px;border:1px solid rgba(11,19,43,.10);border-radius:14px;background:#ffffff}
+.stat strong{display:block;color:var(--gold2);font-size:22px;margin-bottom:5px;font-family:'IBM Plex Mono','IBM Plex Sans Arabic',ui-monospace,monospace}.stat span{font-size:12px;color:var(--muted)}
+.authwrap{min-height:calc(100vh - 76px);display:grid;place-items:center;padding:40px 20px}.authcard{width:min(100%,460px)}.authcard h1{font-size:34px;margin:12px 0}
+.field{display:grid;gap:8px;margin:18px 0}.field label{font-size:13px;color:#39404d}.field input,.field textarea,.field select{width:100%;padding:14px 15px;background:#ffffff;border:1px solid #c7d0da;border-radius:10px;color:#1E293B;outline:none;font:inherit;resize:vertical}.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--gold)}.field select option{background:#ffffff}
+.muted{color:var(--muted);font-size:13px;line-height:1.7}.error{color:#b3261e;font-size:13px}.success{color:#166534;font-size:13px}
+.num{font-family:'IBM Plex Mono','IBM Plex Sans Arabic',ui-monospace,monospace}
+.dashboard{max-width:1180px;margin:auto;padding:54px 24px}.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:30px}
+.tile{padding:24px;border:1px solid rgba(11,19,43,.10);background:#ffffff;border-radius:16px}.tile h3{margin:0 0 10px;color:var(--blue)}
+.footer{padding:24px;text-align:center;color:#5a6470;font-size:12px;border-top:1px solid rgba(11,19,43,.10)}
+/* Keyboard accessibility: visible focus on interactive elements */
+a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--cyan);outline-offset:3px;border-radius:6px}
+@media(max-width:800px){.hero{grid-template-columns:1fr;padding-top:64px;gap:32px}.tiles{grid-template-columns:1fr}.tiles-4{grid-template-columns:repeat(2,1fr)}.nav{height:68px}.panel{padding:22px}}
+/* RTL support for Arabic pages */
+[dir="rtl"]{text-align:right}
+[dir="rtl"] .nav{flex-direction:row-reverse}
+[dir="rtl"] .hero > div:first-child{direction:rtl}
+[dir="rtl"] .field input,[dir="rtl"] .field textarea,[dir="rtl"] .field select{text-align:right}
+/* NOTE: no [dir="rtl"] .brand row-reverse — the Latin wordmark must never
+   mirror. .brand already sets direction:ltr + unicode-bidi:isolate; the old
+   row-reverse rule split "SUPRA-SCIENCE" into "-SCIENCE SUPRA" on RTL
+   documents (e.g. /dashboard with an Arabic ss-lang cookie). */
+/* Ensure proper RTL for flex layouts */
+/* ---- Nov-8 live additions (recovered from the deployed stylesheet) ---- */
+/* Reveal-on-load animation used by the home page */
+@keyframes rise{0%{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+.reveal{animation:.7s cubic-bezier(.22,.61,.36,1) both rise}
+.reveal-1{animation-delay:50ms}
+.reveal-2{animation-delay:.15s}
+.reveal-3{animation-delay:.25s}
+.reveal-4{animation-delay:.35s}
+.reveal-5{animation-delay:.45s}
+.reveal-6{animation-delay:.55s}
+@media (prefers-reduced-motion:reduce){.pulse,.reveal{animation:none}}
+/* Service images + starting-price tag (services / home pages) */
+.service-img-wrap{position:relative;border:1px solid rgba(6,182,212,.35);border-radius:14px;overflow:hidden}
+/* One visual system for all service photos: a single 16:9 box, centered crop.
+   height:auto is essential — without it the <img> height attribute fixes the
+   box height (800/533px) and aspect-ratio never applies, so photos rendered
+   as random tall slices. The faint navy gradient unifies the five photos. */
+.service-img-wrap::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(11,19,43,0) 55%,rgba(11,19,43,.14));pointer-events:none}
+.service-img-wrap img{aspect-ratio:16/9;object-fit:cover;object-position:center;width:100%;height:auto;transition:transform .5s;display:block}
+.service-img-wrap:hover img{transform:scale(1.03)}
+.price-tag{color:var(--navy);letter-spacing:.2px;font-size:26px;font-weight:800;font-family:'IBM Plex Mono','IBM Plex Sans Arabic',ui-monospace,monospace}
+/* "Free to start" offers grid */
+.offer-grid{grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;display:grid}
+/* Leadership photo (home + about pages) */
+.leader-photo{object-fit:contain;border:2px solid var(--gold);background:#ffffff;border-radius:16px;flex:none;width:300px;max-width:100%;height:auto;box-shadow:0 0 0 4px rgba(6,182,212,.20),0 14px 34px rgba(11,19,43,.18)}
+@media (max-width:940px){.leader-photo{width:min(320px,100%)}}
+/* Contact form country dial-code row */
+.field .phone-row{gap:8px;min-width:0;display:flex}
+.field .phone-row select{flex:0 56%;width:auto;min-width:0}
+.field .phone-row input{text-align:left;flex:44%;width:auto;min-width:0}
+@media (max-width:940px){.field .phone-row select{flex-basis:60%;padding:14px 10px;font-size:14px}}
+/* Public AI assistant floating widget (site footer) */
+.pa-root{z-index:60;flex-direction:column;align-items:flex-end;gap:12px;display:flex;position:fixed;bottom:18px}
+.pa-fab{border:2px solid #6366F1;width:56px;height:56px;color:#ffffff;cursor:pointer;background:linear-gradient(145deg,#818cf8,#6366F1);border-radius:50%;place-items:center;font-size:24px;line-height:1;display:grid;box-shadow:0 10px 30px rgba(11,19,43,.25)}
+.pa-fab:hover{box-shadow:0 10px 30px rgba(99,102,241,.45)}
+.pa-panel{background:#ffffff;border:1px solid rgba(6,182,212,.45);border-radius:18px;flex-direction:column;width:min(360px,100vw - 36px);max-height:min(480px,100vh - 110px);display:flex;overflow:hidden;box-shadow:0 24px 80px rgba(11,19,43,.25)}
+.pa-head{border-bottom:1px solid rgba(11,19,43,.12);justify-content:space-between;align-items:center;padding:12px 14px;display:flex}
+.pa-head-title{color:var(--navy);font-weight:800}
+.pa-close{color:#39404d;cursor:pointer;background:0 0;border:0;padding:4px 8px;font-size:16px}
+.pa-messages{flex-direction:column;flex:1;gap:10px;min-height:180px;padding:14px;display:flex;overflow-y:auto}
+.pa-msg{white-space:pre-wrap;overflow-wrap:break-word;border-radius:12px;max-width:88%;padding:10px 12px;font-size:14px;line-height:1.6}
+.pa-ai{color:#1E293B;background:#eef2f7;border:1px solid rgba(11,19,43,.08);align-self:flex-start}
+.pa-user{color:#0B132B;background:rgba(6,182,212,.16);border:1px solid rgba(6,182,212,.5);align-self:flex-end}
+.pa-thinking{opacity:.75}
+.pa-error{color:#b3261e;border:1px solid rgba(179,38,30,.4);border-radius:10px;justify-content:space-between;align-items:center;gap:10px;margin:0 14px 8px;padding:10px 12px;font-size:13px;display:flex}
+.pa-error button{color:var(--navy);cursor:pointer;background:0 0;border:0;font-size:13px}
+.pa-input-row{gap:8px;padding:0 14px 10px;display:flex}
+.pa-input-row input{color:#1E293B;min-width:0;font:inherit;background:#ffffff;border:1px solid #c7d0da;border-radius:10px;outline:none;flex:1;padding:11px 12px;font-size:14px}
+.pa-input-row input:focus{border-color:var(--gold)}
+.pa-send{flex:none;padding:11px 16px}
+.pa-note{color:var(--muted);padding:0 14px 12px;font-size:11px}
+@media (max-width:480px){.pa-panel{max-height:calc(100vh - 100px)}}
+/* reCAPTCHA v3 badge hidden: the required disclosure text with links to
+   Google's Privacy Policy and Terms is shown inside every form that uses
+   it (contact, booking, intake, public assistant). */
+.grecaptcha-badge{visibility:hidden!important}

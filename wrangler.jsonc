@@ -1,0 +1,37 @@
+{
+  "$schema": "https://developers.cloudflare.com/workers/wrangler/configuration-schema.json",
+  "name": "supra-science",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-11-01",
+  "compatibility_flags": ["nodejs_compat"],
+  // Version metadata binding (added 2026-11-19, audit finding M6):
+  // exposes the deployed Worker version id/tag/timestamp to /api/version
+  // so the live version is verifiable over HTTP. $0, no backing resource.
+  "version_metadata": { "binding": "CF_VERSION_METADATA" },
+  // Workers Observability (added 2026-11-19): enables Workers Logs so
+  // console.error lines (e.g. Gemini/Workers AI failures) are queryable
+  // via the telemetry API. $0 — no Logpush job, no extra service.
+  "observability": { "enabled": true },
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  // Secrets (set via `wrangler secret put`, never in this file):
+  // - SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+  // - OPENAI_API_KEY, GEMINI_API_KEY
+  // - GOOGLE_CALENDAR_CLIENT_ID, GOOGLE_CALENDAR_CLIENT_SECRET,
+  //   GOOGLE_CALENDAR_REFRESH_TOKEN
+  // - GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN
+  // - RECAPTCHA_SECRET_KEY
+  // - WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID,
+  //   WHATSAPP_VERIFY_TOKEN, WHATSAPP_APP_SECRET
+  //
+  // Public vars (safe to expose):
+  // NOTE: NEXT_PUBLIC_RECAPTCHA_SITE_KEY is intentionally NOT set here.
+  // It is already configured as a plain-text binding on the live Worker;
+  // setting it here (even to "") would overwrite the live binding on deploy.
+  "vars": {
+    "NEXT_PUBLIC_SUPABASE_URL": "https://ityzbuncztwgtxudcobr.supabase.co",
+    "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_v_T-g22La1o2H977m_c0bQ__k787ogU"
+  }
+}
