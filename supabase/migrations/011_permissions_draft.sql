@@ -1,13 +1,13 @@
--- supabase/migrations/011_permissions_draft.sql
+-- supabase/migrations/011_permissions_draft.sql — APPLIED 2026-11-20
+-- (founder order "اكمل سياسة التحديث والترحيل"). The "_draft" name is
+-- kept so the GitHub snapshot (which has no delete) does not leave a
+-- stale copy behind.
 --
--- DRAFT ONLY, NOT APPLIED. Do NOT apply without the founder's explicit
--- approval (production DDL needs his say-so, same as migration 010).
---
--- Phase 1 of the permissions rebuild (2026-11-20): the permission
--- catalog as database tables, mirroring src/lib/permissions.ts EXACTLY.
--- Applying this migration changes NO runtime behaviour: Phase 1
--- enforcement still reads the code catalog (permissions.ts). These
--- tables are the source of truth Phase 2 will read from, and the
+-- The permission catalog as database tables, mirroring
+-- src/lib/permissions.ts EXACTLY. Applying this migration changes NO
+-- runtime behaviour: enforcement still reads the code catalog
+-- (permissions.ts). These tables are the database mirror of the catalog
+-- (and the seed a future database-driven check would read from); the
 -- matrix test (tests/permissions-matrix.test.mjs) asserts the code
 -- catalog and this seed can never drift apart.
 --

@@ -35,6 +35,9 @@
 -- whitelist in handleAdminStatusUpdate), not by the DB — a WITH CHECK
 -- cannot compare OLD vs NEW values. The DB boundary that matters is
 -- WHICH tables staff can touch at all.
+-- FOLLOW-UP (2026-11-20, migration 012): status-only is now ALSO enforced
+-- at the DB layer via column-level UPDATE grants (projects: status;
+-- consultations: status + scheduled_at; contact_messages: status).
 --
 -- SAFETY: this migration ONLY ADDS policies (and one helper function).
 -- It changes no data, drops no table/column/row, and does not touch any

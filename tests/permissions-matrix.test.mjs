@@ -125,9 +125,9 @@ describe("code catalog == database seed (migration 011)", () => {
     assert.doesNotMatch(roleBlock, /\('admin',/, "SQL seed must hold no admin rows by hand (trigger grants them)");
   });
 
-  it("migration 011 is a draft with the admin auto-grant and read-only RLS", () => {
+  it("migration 011 is applied, with the admin auto-grant and read-only RLS", () => {
     const sql = root("supabase/migrations/011_permissions_draft.sql");
-    assert.match(sql, /DRAFT ONLY, NOT APPLIED/, "011 must be marked as not applied");
+    assert.match(sql, /APPLIED 2026-11-20/, "011 must be marked as applied");
     assert.match(sql, /CREATE OR REPLACE FUNCTION public\.grant_permission_to_admin\(\)/, "011 must define the admin auto-grant function");
     assert.match(sql, /CREATE TRIGGER permissions_grant_admin/, "011 must create the auto-grant trigger");
     assert.match(sql, /SELECT 'admin', key FROM public\.permissions/, "011 must backfill admin for existing keys");

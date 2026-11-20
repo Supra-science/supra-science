@@ -153,3 +153,30 @@ describe("migration 010 matches the live schema", () => {
     }
   });
 });
+
+describe("migration 012 makes status-only true at the database layer", () => {
+  const sql = root("supabase/migrations/012_staff_status_only_update.sql");
+
+  it("revokes table-wide UPDATE and grants only the status columns", () => {
+    assert(sql.includes("REVOKE UPDATE ON public.projects FROM authenticated"));
+    assert(sql.includes("GRANT UPDATE (status) ON public.projects TO authenticated"));
+    assert(sql.includes("REVOKE UPDATE ON public.consultations FROM authenticated"));
+    assert(sql.includes("GRANT UPDATE (status, scheduled_at) ON public.consultations TO authenticated"));
+    assert(sql.includes("REVOKE UPDATE ON public.contact_messages FROM authenticated"));
+    assert(sql.includes("GRANT UPDATE (status) ON public.contact_messages TO authenticated"));
+  });
+
+  it("touches no other table and no other privilege", () => {
+    for (const table of ["invoices", "payments", "quotations", "customers", "consultation_bookings", "user_roles", "audit_logs"]) {
+      assert(!sql.includes(`ON public.${table} FROM authenticated`), `012 must not touch ${table}`);
+    }
+    assert(!sql.includes("GRANT INSERT"), "012 must not change INSERT grants");
+    assert(!sql.includes("GRANT DELETE"), "012 must not change DELETE grants");
+    assert(!sql.includes("GRANT SELECT"), "012 must not change SELECT grants");
+    assert(!sql.includes("FROM anon"), "012 must not touch anon grants");
+  });
+
+  it("contains no data changes and no policy changes", () => {
+    assert.doesNotMatch(sql, /CREATE POLICY|DROP POLICY|ALTER TABLE|INSERT INTO|UPDATE public\.|DELETE FROM/i);
+  });
+});
