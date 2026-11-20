@@ -1,7 +1,7 @@
--- 015_audit_fixes_draft.sql — DRAFT ONLY, NOT APPLIED.
--- Fixes audit findings L1 + L2 + L3 from the full Supabase audit 2026-11-20.
--- DO NOT APPLY without the founder's explicit approval (production DDL).
--- Apply order matters: indexes first (safe, concurrent-safe only if run
+-- 015_audit_fixes_draft.sql — APPLIED 2026-11-20 ~21:03 (founder's "طبق الترحيل").
+-- Verified live: 13 indexes exist; both FKs ON DELETE SET NULL; payments
+-- CHECK no longer allows 'stripe_test'. Rollback: drop the 13 indexes;
+-- re-add the two FKs without ON DELETE; restore 'stripe_test' in the CHECK.
 -- outside a transaction with CONCURRENTLY — as written here they run in one
 -- transaction, fine for tiny tables), then the FK re-definitions, then the
 -- payments CHECK change. Rollback: drop the 13 indexes; re-add the two FKs
