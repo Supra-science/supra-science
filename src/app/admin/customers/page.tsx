@@ -27,7 +27,7 @@ type Customer = {
 };
 
 export default async function AdminCustomers({ searchParams }: { searchParams: Promise<{ id?: string }> }) {
-  await requireAdminPage();
+  await requireAdminPage("customers:read");
   const lang = await getLang();
   const supabase = getServiceSupabase();
   const { id } = await searchParams;

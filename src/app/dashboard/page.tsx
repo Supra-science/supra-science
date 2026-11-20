@@ -6,6 +6,7 @@ import { t } from "@/lib/i18n";
 import { PasswordChange } from "@/components/password-change";
 import { MfaEnrollment } from "@/components/mfa-enrollment";
 import DashboardNav from "@/components/dashboard-nav";
+import { resolveEffectiveRole, roleHasPermission } from "@/lib/permissions";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -19,6 +20,12 @@ export default async function DashboardPage() {
     supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle(),
     supabase.from("user_roles").select("role").eq("user_id", user.id).maybeSingle(),
   ]);
+
+  // Link visibility is a permission decision, not a role comparison:
+  // the allowlisted owner is an admin even with no role row. Admins see
+  // only the admin link (as before) even though they also hold
+  // staff:access — the staff workspace stays reachable at /staff.
+  const effectiveRole = resolveEffectiveRole(user.email, role?.role);
 
   async function signOut() {
     "use server";
@@ -73,13 +80,21 @@ export default async function DashboardPage() {
             </a>
           </article>
         </div>
-        {role?.role === "admin" && (
+        {roleHasPermission(effectiveRole, "admin:access") && (
           <p style={{ marginTop: 28 }}>
             <Link className="btn" href="/admin">
               {t("openAdmin", lang)}
             </Link>
           </p>
         )}
+        {roleHasPermission(effectiveRole, "staff:access") &&
+          !roleHasPermission(effectiveRole, "admin:access") && (
+            <p style={{ marginTop: 28 }}>
+              <Link className="btn" href="/staff">
+                {t("openStaff", lang)}
+              </Link>
+            </p>
+          )}
         <PasswordChange lang={lang} />
         <MfaEnrollment lang={lang} />
         <p className="muted" style={{ marginTop: 24 }}>

@@ -31,7 +31,7 @@ type Payment = {
 };
 
 export default async function AdminPayments() {
-  await requireAdminPage();
+  await requireAdminPage("payments:read");
   const lang = await getLang();
   const supabase = getServiceSupabase();
 

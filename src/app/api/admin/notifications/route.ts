@@ -11,7 +11,7 @@ import { requireAdmin, serviceSupabase, logAudit, errorMessage } from "@/lib/adm
 export const dynamic = "force-dynamic";
 
 export async function PATCH(req: NextRequest) {
-  const auth = await requireAdmin();
+  const auth = await requireAdmin("notifications:status");
   if (auth.error) return auth.error;
   try {
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;

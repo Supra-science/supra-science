@@ -22,7 +22,7 @@ type AuditLog = {
 };
 
 export default async function AdminAuditLogs() {
-  await requireAdminPage();
+  await requireAdminPage("audit:read");
   const lang = await getLang();
   const supabase = getServiceSupabase();
 

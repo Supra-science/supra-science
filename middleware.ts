@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { updateSession } from "@/lib/supabase/proxy";
-import { isAdminUser } from "@/lib/admin-check";
+import { hasPermission } from "@/lib/permissions";
 
 /**
  * Language-first middleware.
@@ -75,7 +75,44 @@ async function checkAdminAccess(
     }
     return NextResponse.redirect(new URL("/login", request.url));
   }
-  if (!(await isAdminUser(supabase, user))) {
+  if (!(await hasPermission(supabase, user, "admin:access"))) {
+    if (isApi) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
+  return null;
+}
+
+/**
+ * Central staff guard (added 2026-11-20, staff permissions build) —
+ * same shape as checkAdminAccess but allows staff OR admin (admin is a
+ * superset of staff). Second defense behind the per-page/route guards
+ * for /staff/* and /api/staff/*.
+ */
+async function checkStaffAccess(
+  request: NextRequest,
+): Promise<NextResponse | null> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  if (!url || !key) return null;
+  const supabase = createServerClient(url, key, {
+    cookies: {
+      getAll: () => request.cookies.getAll(),
+      setAll: () => {},
+    },
+  });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const isApi = request.nextUrl.pathname.startsWith("/api/staff/");
+  if (!user) {
+    if (isApi) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+  if (!(await hasPermission(supabase, user, "staff:access"))) {
     if (isApi) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -147,6 +184,17 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/api/admin/")
   ) {
     const denied = await checkAdminAccess(request);
+    if (denied) return denied;
+  }
+
+  // Central staff guard (added 2026-11-20): /staff and /api/staff allow
+  // staff or admin; customers are redirected to /dashboard.
+  if (
+    pathname === "/staff" ||
+    pathname.startsWith("/staff/") ||
+    pathname.startsWith("/api/staff/")
+  ) {
+    const denied = await checkStaffAccess(request);
     if (denied) return denied;
   }
 

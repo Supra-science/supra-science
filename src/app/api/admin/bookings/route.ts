@@ -22,7 +22,7 @@ export const dynamic = "force-dynamic";
 const STATUSES = ["booked", "cancelled", "completed"];
 
 export async function PATCH(req: NextRequest) {
-  const auth = await requireAdmin();
+  const auth = await requireAdmin("bookings:status");
   if (auth.error) return auth.error;
   try {
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;

@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
 const METHODS = ["bank_transfer", "cash", "other"];
 
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin();
+  const auth = await requireAdmin("payments:manage");
   if (auth.error) return auth.error;
   try {
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;

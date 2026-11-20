@@ -25,7 +25,7 @@ type Notification = {
 };
 
 export default async function AdminNotifications() {
-  await requireAdminPage();
+  await requireAdminPage("notifications:read");
   const lang = await getLang();
   const supabase = getServiceSupabase();
 

@@ -10,14 +10,14 @@ import { requireAdminPage, getServiceSupabase } from "@/lib/admin-page";
 import { getLang } from "@/lib/lang-server";
 import { t, formatDate, roleLabel } from "@/lib/i18n";
 import { page, heading, card, row, gold, muted } from "@/lib/admin-styles";
-import { AdminActionButton } from "@/components/admin-actions";
+import { AdminActionButton, DeleteUserButton } from "@/components/admin-actions";
 
 export const dynamic = "force-dynamic";
 
 const ROLES = ["admin", "staff", "customer"];
 
 export default async function AdminUsers() {
-  const { user } = await requireAdminPage();
+  const { user } = await requireAdminPage("users:manage");
   const lang = await getLang();
   const supabase = getServiceSupabase();
 
@@ -86,6 +86,18 @@ export default async function AdminUsers() {
                       label={`${t("changeRole", lang)}: ${roleLabel(r, lang)}`}
                     />
                   ))}
+                {!isSelf && (
+                  <DeleteUserButton
+                    endpoint="/api/admin/users"
+                    userId={String(profile.id)}
+                    label={t("deleteUser", lang)}
+                    confirmText={
+                      lang === "ar"
+                        ? `إزالة ${String(profile.full_name || profile.id)} نهائياً؟ سيُحذف حسابه وملفه ودوره. لا يمكن التراجع عن هذا.`
+                        : `Remove ${String(profile.full_name || profile.id)} permanently? Their account, profile and role will be deleted. This cannot be undone.`
+                    }
+                  />
+                )}
               </span>
             </div>
           );

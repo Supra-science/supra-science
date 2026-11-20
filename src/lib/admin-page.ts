@@ -11,28 +11,24 @@
 // behaviour below are exact.
 
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
-import { isAdminUser } from "@/lib/admin-check";
-
-/** True when the user is the allowlisted admin email or holds the admin role. */
-export async function isAdmin(supabase: SupabaseClient, user: User): Promise<boolean> {
-  return isAdminUser(supabase, user);
-}
+import { requirePermissionPage } from "@/lib/permission-check";
+import type { PermissionKey } from "@/lib/permissions";
 
 /**
  * Page guard for admin Server Components. Redirects to /login when there is
  * no session and to /dashboard when the user is not an admin. Returns the
  * signed-in user plus the cookie-based Supabase client.
+ *
+ * Permissions rebuild (2026-11-20): the area check is now the permission
+ * `admin:access`, and each admin page passes the specific permission it
+ * needs. The MFA gate below is unchanged and applies to every admin page.
  */
-export async function requireAdminPage(): Promise<{ user: User; supabase: SupabaseClient }> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-  if (!(await isAdmin(supabase, user))) redirect("/dashboard");
+export async function requireAdminPage(
+  permission: PermissionKey = "admin:access",
+): Promise<{ user: User; supabase: SupabaseClient }> {
+  const { user, supabase } = await requirePermissionPage(permission);
   // MFA (added 2026-11-13, audit finding #6): an admin with an enrolled
   // TOTP factor must have completed verification (AAL2) — the login page
   // handles the TOTP step right after sign-in.

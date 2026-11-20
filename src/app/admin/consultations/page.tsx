@@ -29,7 +29,7 @@ type Consultation = {
 };
 
 export default async function AdminConsultations() {
-  await requireAdminPage();
+  await requireAdminPage("consultations:read");
   const lang = await getLang();
   const supabase = getServiceSupabase();
 

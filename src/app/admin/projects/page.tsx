@@ -30,7 +30,7 @@ type ProjectRow = {
 };
 
 export default async function AdminProjects({ searchParams }: { searchParams: Promise<{ id?: string }> }) {
-  await requireAdminPage();
+  await requireAdminPage("projects:read");
   const lang = await getLang();
   const supabase = getServiceSupabase();
   const { id } = await searchParams;

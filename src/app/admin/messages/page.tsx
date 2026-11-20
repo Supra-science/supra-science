@@ -31,7 +31,7 @@ type ContactMessage = {
 };
 
 export default async function AdminMessages() {
-  await requireAdminPage();
+  await requireAdminPage("messages:read");
   const lang = await getLang();
   const supabase = getServiceSupabase();
 

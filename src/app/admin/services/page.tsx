@@ -18,7 +18,7 @@ import { ServiceList } from "@/components/service-editor";
 export const dynamic = "force-dynamic";
 
 export default async function AdminServices() {
-  await requireAdminPage();
+  await requireAdminPage("services:read");
   const lang = await getLang();
   const supabase = getServiceSupabase();
 

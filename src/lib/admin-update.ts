@@ -13,6 +13,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin, serviceSupabase, logAudit, errorMessage } from "@/lib/admin-auth";
+import { requireStaff } from "@/lib/staff-auth";
 
 export type AdminUpdateOptions = {
   /** Supabase table to update. */
@@ -27,6 +28,16 @@ export type AdminUpdateOptions = {
   extraFields?: string[];
   /** Singular entity name used in the audit log, e.g. "project". */
   entity: string;
+  /**
+   * Guard used before the update. Defaults to requireAdmin (all existing
+   * admin routes). Staff routes pass requireStaff so staff may update
+   * only the tables their routes expose — the handler itself is identical
+   * and every change is still audit-logged as `update:<table>`.
+   */
+  authFn?: () => Promise<
+    | { user: { id: string } }
+    | { error: NextResponse }
+  >;
 };
 
 /**
@@ -37,8 +48,9 @@ export type AdminUpdateOptions = {
  * { ok: true, row }.
  */
 export async function handleAdminStatusUpdate(req: NextRequest, options: AdminUpdateOptions) {
-  const auth = await requireAdmin();
-  if (auth.error) return auth.error;
+  const auth = await (options.authFn ?? requireAdmin)();
+  if ("error" in auth && auth.error) return auth.error;
+  const actorId = (auth as { user: { id: string } }).user.id;
   try {
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
     const id = String(body.id ?? "");
@@ -68,7 +80,7 @@ export async function handleAdminStatusUpdate(req: NextRequest, options: AdminUp
       .single();
     if (error) throw error;
 
-    await logAudit(admin, auth.user.id, `update:${options.table}`, options.entity, id, patch);
+    await logAudit(admin, actorId, `update:${options.table}`, options.entity, id, patch);
     return NextResponse.json({ ok: true, row: data });
   } catch (e) {
     const msg = errorMessage(e);

@@ -20,7 +20,7 @@ export const dynamic = "force-dynamic";
 const STATUSES = ["draft", "sent", "approved", "rejected", "expired"];
 
 export default async function AdminQuotations({ searchParams }: { searchParams: Promise<{ id?: string }> }) {
-  await requireAdminPage();
+  await requireAdminPage("quotations:read");
   const lang = await getLang();
   const supabase = getServiceSupabase();
   const { id } = await searchParams;

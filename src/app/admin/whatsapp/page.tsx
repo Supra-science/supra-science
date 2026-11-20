@@ -41,7 +41,7 @@ type WhatsAppMessage = {
 };
 
 export default async function AdminWhatsApp({ searchParams }: { searchParams: Promise<{ id?: string }> }) {
-  await requireAdminPage();
+  await requireAdminPage("whatsapp:manage");
   const lang = await getLang();
   const supabase = getServiceSupabase();
   const { id } = await searchParams;

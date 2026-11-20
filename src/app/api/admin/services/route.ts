@@ -6,7 +6,8 @@
 // title_ar required; slug auto-generated from the title when absent).
 // PATCH: update by id. DELETE: delete by id. Only the allowlisted fields
 // below are ever written. Writes go through service_role; the caller must
-// pass requireAdmin(). Does NOT write an audit row.
+// pass the admin guard (services:read for GET, services:manage for writes).
+// Does NOT write an audit row.
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin, serviceSupabase, errorMessage } from "@/lib/admin-auth";
@@ -46,7 +47,7 @@ function slugify(s: string): string {
 }
 
 export async function GET() {
-  const auth = await requireAdmin();
+  const auth = await requireAdmin("services:read");
   if (auth.error) return auth.error;
   try {
     const admin = serviceSupabase();
@@ -60,7 +61,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin();
+  const auth = await requireAdmin("services:manage");
   if (auth.error) return auth.error;
   try {
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
@@ -80,7 +81,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const auth = await requireAdmin();
+  const auth = await requireAdmin("services:manage");
   if (auth.error) return auth.error;
   try {
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
@@ -99,7 +100,7 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const auth = await requireAdmin();
+  const auth = await requireAdmin("services:manage");
   if (auth.error) return auth.error;
   try {
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;

@@ -29,7 +29,7 @@ async function invoiceWithTotals(admin: ReturnType<typeof serviceSupabase>, inv:
 }
 
 export async function GET() {
-  const auth = await requireAdmin();
+  const auth = await requireAdmin("invoices:read");
   if (auth.error) return auth.error;
   try {
     const admin = serviceSupabase();
@@ -48,7 +48,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin();
+  const auth = await requireAdmin("invoices:manage");
   if (auth.error) return auth.error;
   try {
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const auth = await requireAdmin();
+  const auth = await requireAdmin("invoices:manage");
   if (auth.error) return auth.error;
   try {
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;

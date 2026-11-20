@@ -55,7 +55,7 @@ const STATUS_COLOR: Record<string, string> = {
 type Integration = { name: string; status: "Connected" | "Pending" | "Failed"; detail: string; docs: string };
 
 export default async function AdminIntegrations() {
-  await requireAdminPage();
+  await requireAdminPage("integrations:manage");
   const lang = await getLang();
 
   const items: Integration[] = [];

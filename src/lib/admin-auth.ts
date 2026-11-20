@@ -8,10 +8,11 @@
 // the SUPABASE_SERVICE_ROLE_KEY env var.
 
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { isAdminUser } from "@/lib/admin-check";
+import { requirePermission } from "@/lib/permission-check";
+import type { PermissionGuardResult } from "@/lib/permission-check";
+import type { PermissionKey } from "@/lib/permissions";
 
 /**
  * Best-effort audit write. Failures are swallowed so a logging failure can
@@ -52,19 +53,22 @@ export function errorMessage(e: unknown): string {
   return "failed";
 }
 
-/** Verify the caller is an admin. Returns { user } or { error: NextResponse }. */
-export async function requireAdmin() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) as NextResponse };
-  }
-  let isAdmin = await isAdminUser(supabase, user);
-  if (!isAdmin) {
-    return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) as NextResponse };
-  }
+/**
+ * Verify the caller is an admin. Returns { user } or { error: NextResponse }.
+ *
+ * Permissions rebuild (2026-11-20): the area check is now the permission
+ * `admin:access`, and each admin route passes the specific permission it
+ * needs — the admin wildcard makes that check pass for every admin today,
+ * and the declaration is what the permission matrix tests enforce. The
+ * MFA gate below is unchanged: it applies to every admin call, whichever
+ * permission was asked for.
+ */
+export async function requireAdmin(
+  permission: PermissionKey = "admin:access",
+): Promise<PermissionGuardResult> {
+  const checked = await requirePermission(permission);
+  if ("error" in checked) return checked;
+  const { user, supabase } = checked;
   // MFA (added 2026-11-13, audit finding #6): an admin with an enrolled
   // TOTP factor must have completed verification (AAL2). Accounts without
   // an enrolled factor have nextLevel "aal1" and are unaffected.
@@ -76,7 +80,7 @@ export async function requireAdmin() {
       ) as NextResponse,
     };
   }
-  return { user };
+  return { user, supabase };
 }
 
 /**
@@ -87,7 +91,7 @@ export async function requireAdmin() {
  * an admin out on a transient failure.
  */
 export async function hasCompletedMfa(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: SupabaseClient,
 ): Promise<boolean> {
   try {
     const { data: aal } =

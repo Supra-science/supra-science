@@ -70,6 +70,77 @@ export function AdminActionButton({ endpoint, payload, label, confirmText }: Adm
   );
 }
 
+type DeleteUserButtonProps = {
+  endpoint: string;
+  userId: string;
+  label: string;
+  /** window.confirm text — the destructive action always asks first. */
+  confirmText: string;
+};
+
+/**
+ * Delete-user button (added 2026-11-20, admin user control): DELETEs
+ * { user_id } to `endpoint` after a window.confirm, then refreshes the
+ * page. Rendered in red — deletion is permanent. A 409 from the API
+ * (business records block the delete) is shown inline with its message.
+ */
+export function DeleteUserButton({ endpoint, userId, label, confirmText }: DeleteUserButtonProps) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function run() {
+    if (!window.confirm(confirmText)) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(endpoint, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: userId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        const blockers = (data as { blockers?: Record<string, number> }).blockers;
+        const detail = blockers
+          ? `: ${Object.entries(blockers)
+              .map(([k, v]) => `${k} (${v})`)
+              .join(", ")}`
+          : "";
+        throw new Error(`${data.error || "Delete failed"}${detail}`);
+      }
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Delete failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <span style={{ display: "inline-flex", flexDirection: "column", gap: 4 }}>
+      <button
+        type="button"
+        onClick={run}
+        disabled={busy}
+        style={{
+          border: "1px solid #dc2626",
+          color: "#dc2626",
+          background: "transparent",
+          padding: "6px 12px",
+          borderRadius: 6,
+          cursor: busy ? "wait" : "pointer",
+          fontSize: 12,
+          opacity: busy ? 0.6 : 1,
+        }}
+      >
+        {busy ? "…" : label}
+      </button>
+      {error && <span style={{ color: "#e66", fontSize: 11 }}>{String(error).slice(0, 160)}</span>}
+    </span>
+  );
+}
+
 type StatusChangerProps = {
   endpoint: string;
   id: string;

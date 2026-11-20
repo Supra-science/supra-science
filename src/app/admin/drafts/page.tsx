@@ -61,7 +61,7 @@ type DraftRow = {
 };
 
 export default async function AdminDrafts({ searchParams }: { searchParams: Promise<{ id?: string }> }) {
-  await requireAdminPage();
+  await requireAdminPage("drafts:manage");
   const lang = await getLang();
   const supabase = getServiceSupabase();
   const { id } = await searchParams;

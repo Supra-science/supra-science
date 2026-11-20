@@ -12,7 +12,18 @@ export async function isAdminUser(
   supabase: SupabaseClient,
   user: User,
 ): Promise<boolean> {
-  if (user.email && ADMIN_EMAILS.includes(user.email)) return true;
+  // Case-insensitive allowlist match (hardened 2026-11-20, permissions
+  // rebuild): the stored auth email is lowercase
+  // ("supra-science@proton.me") while the constant is capitalised — a
+  // case-sensitive match would silently drop the owner if the role row
+  // were ever deleted. The owner email is an admin either way today
+  // (the role row exists), so this changes no live behaviour.
+  if (
+    user.email &&
+    ADMIN_EMAILS.some((allowed) => allowed.toLowerCase() === user.email!.toLowerCase())
+  ) {
+    return true;
+  }
   const { data } = await supabase
     .from("user_roles")
     .select("role")

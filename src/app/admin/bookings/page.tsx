@@ -46,7 +46,7 @@ function formatScheduledAt(value: string, lang: Lang): string {
 }
 
 export default async function AdminBookings() {
-  await requireAdminPage();
+  await requireAdminPage("bookings:read");
   const lang = await getLang();
   const supabase = getServiceSupabase();
 

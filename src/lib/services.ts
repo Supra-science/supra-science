@@ -308,7 +308,7 @@ const QUICK_LAUNCH_EN: QuickLaunchPackage[] = [
     id: "supraflow",
     title: "SupraFlow™ — WhatsApp automation & AI",
     tagline: "WhatsApp Business AI for clinics & businesses",
-    priceRange: "$149–$299 setup + $39–$69 / month",
+    priceRange: "$149–$299 setup (one-time)",
     priceNote: "Indicative range — the final price is set in your written quotation. Reduced local pricing for Yemen & North Africa on request.",
     audience: "Private clinics, dental & dermatology centers, and shops in Saudi Arabia, the UAE, and Yemen.",
     scope: [
@@ -389,7 +389,7 @@ const QUICK_LAUNCH_AR: QuickLaunchPackage[] = [
     id: "supraflow",
     title: "SupraFlow™ — أتمتة واتساب والذكاء الاصطناعي",
     tagline: "واتساب أعمال ذكي للعيادات والشركات",
-    priceRange: "$149–$299 تأسيس + $39–$69 / شهرياً",
+    priceRange: "$149–$299 تأسيس (دفعة واحدة)",
     priceNote: "نطاق استرشادي — السعر النهائي في عرض السعر المكتوب. أسعار محلية مخفّضة لليمن وشمال أفريقيا عند الطلب.",
     audience: "العيادات الخاصة ومراكز الأسنان والجلدية والمتاجر في السعودية والإمارات واليمن.",
     scope: [

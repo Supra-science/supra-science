@@ -63,7 +63,7 @@ async function sendWhatsAppText(
 
 export async function POST(req: NextRequest) {
   try {
-    const auth = await requireAdmin();
+    const auth = await requireAdmin("whatsapp:manage");
     if (auth.error) return auth.error;
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
     const to = typeof body.to === "string" ? body.to : "";

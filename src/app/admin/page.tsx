@@ -17,7 +17,7 @@ import { page, card, row, gold, muted } from "@/lib/admin-styles";
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboard() {
-  const { user } = await requireAdminPage();
+  const { user } = await requireAdminPage("admin:access");
   const lang = await getLang();
   const supabase = getServiceSupabase();
 

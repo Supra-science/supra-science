@@ -8,6 +8,7 @@
 
 import { NextRequest } from "next/server";
 import { handleAdminStatusUpdate } from "@/lib/admin-update";
+import { requireAdmin } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -26,5 +27,6 @@ export async function PATCH(req: NextRequest) {
       "cancelled",
     ],
     entity: "project",
+    authFn: () => requireAdmin("projects:status"),
   });
 }

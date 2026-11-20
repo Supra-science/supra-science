@@ -48,7 +48,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   // Guard the whole admin section here (added 2026-11-13, audit finding #7):
   // previously this layout rendered the 16-section nav to any visitor and
   // each page guarded itself. Non-admins are redirected before any nav renders.
-  await requireAdminPage();
+  await requireAdminPage("admin:access");
   const lang = await getLang();
   const otherLang = lang === "ar" ? "en" : "ar";
   return (

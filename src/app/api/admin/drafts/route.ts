@@ -8,6 +8,7 @@
 
 import { NextRequest } from "next/server";
 import { handleAdminStatusUpdate } from "@/lib/admin-update";
+import { requireAdmin } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,7 @@ export async function PATCH(req: NextRequest) {
     table: "architecture_drafts",
     allowedStatuses: ["draft", "reviewed", "converted"],
     entity: "architecture_draft",
+    authFn: () => requireAdmin("drafts:manage"),
     extraFields: ["project_id"],
   });
 }

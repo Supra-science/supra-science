@@ -20,7 +20,7 @@ export const dynamic = "force-dynamic";
 type InvoiceWithTotals = Record<string, unknown> & { paid_cents: number; balance_cents: number };
 
 export default async function AdminInvoices() {
-  await requireAdminPage();
+  await requireAdminPage("invoices:read");
   const lang = await getLang();
   const supabase = getServiceSupabase();
 

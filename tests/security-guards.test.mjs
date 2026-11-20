@@ -27,7 +27,7 @@ describe("finding #7 — central admin guard", () => {
     assert.match(mw, /pathname === "\/admin"/, "guard must cover /admin");
     assert.match(mw, /pathname\.startsWith\("\/admin\/"\)/, "guard must cover /admin/*");
     assert.match(mw, /pathname\.startsWith\("\/api\/admin\/"\)/, "guard must cover /api/admin/*");
-    assert.match(mw, /isAdminUser\(supabase, user\)/, "guard must verify the admin identity");
+    assert.match(mw, /hasPermission\(supabase, user, "admin:access"\)/, "guard must verify the admin:access permission");
   });
 
   it("middleware returns 401/403 JSON for API routes, redirects for pages", () => {
@@ -40,7 +40,7 @@ describe("finding #7 — central admin guard", () => {
 
   it("admin layout guards the whole section before rendering the nav", () => {
     const layout = src("app/admin/layout.tsx");
-    assert.match(layout, /requireAdminPage\(\)/, "admin layout must call requireAdminPage()");
+    assert.match(layout, /requireAdminPage\("admin:access"\)/, "admin layout must call requireAdminPage(\"admin:access\")");
     assert.match(layout, /import \{ requireAdminPage \} from "@\/lib\/admin-page"/, "layout must import the guard");
   });
 
@@ -48,9 +48,14 @@ describe("finding #7 — central admin guard", () => {
     const shared = src("lib/admin-check.ts");
     assert.match(shared, /export const ADMIN_EMAILS = \["Supra-science@proton\.me"\]/, "admin-check must hold the allowlist");
     assert.match(shared, /export async function isAdminUser/, "admin-check must export isAdminUser");
-    for (const f of ["lib/admin-auth.ts", "lib/admin-page.ts"]) {
+    // The wrappers must use the shared permission guard (which itself
+    // uses isAdminUser via the permission layer), never their own list.
+    for (const [f, guard] of [
+      ["lib/admin-auth.ts", /requirePermission\(/],
+      ["lib/admin-page.ts", /requirePermissionPage\(/],
+    ]) {
       const code = src(f);
-      assert.match(code, /isAdminUser/, `${f} must use the shared helper`);
+      assert.match(code, guard, `${f} must use the shared permission guard`);
       assert.doesNotMatch(code, /const ADMIN_EMAILS/, `${f} must not define its own ADMIN_EMAILS`);
     }
   });
