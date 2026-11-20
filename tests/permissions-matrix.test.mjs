@@ -95,17 +95,18 @@ const MATRIX = {
   "app/staff/messages/page.tsx": ["messages:read"],
 };
 
-describe("code catalog == database seed (migrations 011 + 013)", () => {
-  it("permissions.ts catalog and the 011 + 013 seeds hold the same 29 keys", () => {
+describe("code catalog == database seed (migrations 011 + 013 + 014)", () => {
+  it("permissions.ts catalog and the 011 + 013 + 014 seeds hold the same 30 keys", () => {
     const code = src("lib/permissions.ts");
     const codeKeys = new Set([...code.matchAll(/^  "([a-z]+:[a-z]+)":/gm)].map((m) => m[1]));
     const sql011 = root("supabase/migrations/011_permissions_draft.sql");
     const sql013 = root("supabase/migrations/013_owner_role_and_suspend.sql");
+    const sql014 = root("supabase/migrations/014_contacts_read.sql");
     const sqlKeys = new Set(
-      [...(sql011 + sql013).matchAll(/\('([a-z]+:[a-z]+)',/g)].map((m) => m[1]),
+      [...(sql011 + sql013 + sql014).matchAll(/\('([a-z]+:[a-z]+)',/g)].map((m) => m[1]),
     );
-    assert.equal(codeKeys.size, 29, `code catalog must hold 29 keys, got ${codeKeys.size}`);
-    assert.equal(sqlKeys.size, 29, `SQL seeds must hold 29 keys, got ${sqlKeys.size}`);
+    assert.equal(codeKeys.size, 30, `code catalog must hold 30 keys, got ${codeKeys.size}`);
+    assert.equal(sqlKeys.size, 30, `SQL seeds must hold 30 keys, got ${sqlKeys.size}`);
     assert.deepEqual([...codeKeys].sort(), [...sqlKeys].sort(), "code catalog and SQL seeds must match exactly");
   });
 
@@ -156,16 +157,41 @@ describe("code catalog == database seed (migrations 011 + 013)", () => {
     assert.match(sql, /DELETE FROM public\.role_permissions\s+WHERE role = 'admin' AND permission_key IN \('integrations:manage', 'owner:access'\)/, "013 must remove the admin rows for the owner-only keys");
     assert.match(sql, /SET role = 'owner'\s+WHERE user_id = 'd4ed169a-4cf9-4c84-b250-0d7d33ff65dc'/, "013 must promote the Proton admin to owner");
   });
+
+  it("migration 014 is a DRAFT that adds contacts:read as owner-only", () => {
+    const sql = root("supabase/migrations/014_contacts_read.sql");
+    assert.match(sql, /DRAFT, NOT APPLIED/, "014 must be marked as a draft, never applied silently");
+    assert.match(sql, /DO NOT APPLY without the founder's explicit approval/, "014 must require the founder's approval");
+    assert.match(sql, /\('contacts:read', 'View contact details/, "014 must seed contacts:read");
+    assert.match(sql, /NEW\.key NOT IN \('integrations:manage', 'owner:access', 'contacts:read'\)/, "014 trigger must skip all three owner-only keys for admin");
+    assert.ok(
+      sql.indexOf("CREATE OR REPLACE FUNCTION public.grant_permission_to_admin()") < sql.indexOf("('contacts:read'"),
+      "014 must rewrite the trigger BEFORE inserting contacts:read, or the old trigger grants it to the admin",
+    );
+    assert.match(sql, /SELECT 'owner', key FROM public\.permissions\s+WHERE key = 'contacts:read'/, "014 must backfill the owner for the new key");
+    assert.match(sql, /DELETE FROM public\.role_permissions\s+WHERE role = 'admin' AND permission_key IN \('integrations:manage', 'owner:access', 'contacts:read'\)/, "014 must remove the admin rows for the owner-only keys");
+  });
 });
 
 describe("owner-only rules in code", () => {
-  it("integrations:manage and owner:access are owner-only; admin holds the other 27", () => {
+  it("integrations:manage, owner:access and contacts:read are owner-only; admin holds the other 27", () => {
     const code = src("lib/permissions.ts");
     const ownerOnly = code.slice(code.indexOf("OWNER_ONLY_PERMISSIONS"), code.indexOf("];", code.indexOf("OWNER_ONLY_PERMISSIONS")));
     assert.match(ownerOnly, /"integrations:manage"/, "integrations:manage must be owner-only");
     assert.match(ownerOnly, /"owner:access"/, "owner:access must be owner-only");
+    assert.match(ownerOnly, /"contacts:read"/, "contacts:read must be owner-only");
     assert.match(code, /if \(role === "owner"\) return true;/, "owner must be a wildcard");
     assert.match(code, /if \(role === "admin"\) return !OWNER_ONLY_PERMISSIONS\.includes/, "admin must be a wildcard minus owner-only");
+  });
+
+  it("the users page shows contact details only to the owner", () => {
+    const page = src("app/admin/users/page.tsx");
+    assert.match(page, /hasPermission\(sessionSupabase, user, "contacts:read"\)/, "users page must check contacts:read");
+    assert.match(page, /auth\.admin\.listUsers\(\{ page: 1, perPage: 200 \}\)/, "users page must read Auth emails through the service client");
+    assert.match(page, /\.from\("customers"\)\.select\("user_id, email, phone, company, country"\)/, "users page must read the business contact record");
+    assert.match(page, /contactParts\.length > 0/, "users page must render the contact line only when there is contact data");
+    assert.match(page, /const contactParts = canViewContact/, "contact parts must be empty unless the viewer may view contacts");
+    assert.match(page, /requireAdminPage\("users:manage"\)/, "users page itself must stay gated by users:manage");
   });
 
   it("suspension voids every permission in hasPermission", () => {

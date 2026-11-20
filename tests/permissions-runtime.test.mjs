@@ -15,6 +15,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
   ALL_PERMISSIONS,
+  OWNER_ONLY_PERMISSIONS,
   PERMISSIONS,
   ROLE_PERMISSIONS,
   getRolePermissions,
@@ -41,6 +42,7 @@ const ADMIN_ONLY = [
   "users:manage",
   "users:delete",
   "users:suspend",
+  "contacts:read",
   "owner:access",
   "invoices:read",
   "invoices:manage",
@@ -59,9 +61,9 @@ const ADMIN_ONLY = [
 ];
 
 describe("permission catalog", () => {
-  it("holds exactly 29 permissions", () => {
-    assert.equal(ALL_PERMISSIONS.length, 29, "catalog size is a contract — update the matrix test too");
-    assert.equal(Object.keys(PERMISSIONS).length, 29);
+  it("holds exactly 30 permissions", () => {
+    assert.equal(ALL_PERMISSIONS.length, 30, "catalog size is a contract — update the matrix test too");
+    assert.equal(Object.keys(PERMISSIONS).length, 30);
     assert.deepEqual([...ALL_PERMISSIONS].sort(), Object.keys(PERMISSIONS).sort());
   });
 
@@ -89,8 +91,13 @@ describe("roleHasPermission — the matrix, executed", () => {
   });
 
   it("admin holds every permission except the owner-only ones", () => {
+    assert.deepEqual(
+      [...OWNER_ONLY_PERMISSIONS].sort(),
+      ["contacts:read", "integrations:manage", "owner:access"],
+      "owner-only set is a contract — update the matrix test too",
+    );
     for (const key of ALL_PERMISSIONS) {
-      if (key === "integrations:manage" || key === "owner:access") {
+      if (OWNER_ONLY_PERMISSIONS.includes(key)) {
         assert.equal(roleHasPermission("admin", key), false, `admin must NOT hold owner-only ${key}`);
       } else {
         assert.equal(roleHasPermission("admin", key), true, `admin must hold ${key}`);
@@ -132,10 +139,11 @@ describe("roleHasPermission — the matrix, executed", () => {
 
 describe("getRolePermissions", () => {
   it("owner gets the whole catalog, admin the catalog minus owner-only, staff its 10, customer none", () => {
-    assert.equal(getRolePermissions("owner").length, 29);
+    assert.equal(getRolePermissions("owner").length, 30);
     assert.equal(getRolePermissions("admin").length, 27);
     assert.ok(!getRolePermissions("admin").includes("integrations:manage"));
     assert.ok(!getRolePermissions("admin").includes("owner:access"));
+    assert.ok(!getRolePermissions("admin").includes("contacts:read"));
     assert.deepEqual([...getRolePermissions("staff")].sort(), [...STAFF_EXPECTED].sort());
     assert.deepEqual(getRolePermissions("customer"), []);
   });

@@ -16,8 +16,10 @@
 //   silently grant access.
 // - This module is the runtime-enforced catalog. The database twin lives
 //   in supabase/migrations/011_permissions_draft.sql (APPLIED 2026-11-20)
-//   plus 013_owner_role_and_suspend.sql — tests/permissions-matrix.test.mjs
-//   asserts the two can never drift apart.
+//   plus 013_owner_role_and_suspend.sql (APPLIED 2026-11-20) and the
+//   014_contacts_read.sql DRAFT (not applied — needs the founder's
+//   explicit approval) — tests/permissions-matrix.test.mjs asserts the
+//   two can never drift apart.
 // - Role identity comes from the role primitives (isOwnerUser /
 //   isAdminUser / isStaffUser): hasPermission() asks them in order, so
 //   the allowlisted owner email keeps working exactly as before. A
@@ -49,6 +51,7 @@ export type PermissionKey =
   | "bookings:read"
   | "bookings:status"
   | "customers:read"
+  | "contacts:read"
   | "messages:read"
   | "messages:status"
   | "invoices:read"
@@ -81,6 +84,7 @@ export const PERMISSIONS: Record<PermissionKey, string> = {
   "bookings:read": "View bookings",
   "bookings:status": "Change booking status",
   "customers:read": "View customers",
+  "contacts:read": "View contact details (email, phone, company, country) of any user",
   "messages:read": "View contact messages",
   "messages:status": "Change contact-message status",
   "invoices:read": "View invoices",
@@ -109,13 +113,15 @@ export const ALL_PERMISSIONS: PermissionKey[] = Object.keys(
 /**
  * Owner-only permissions. The admin wildcard does NOT include these —
  * only the owner holds them. Add a key here (and to the DB trigger in
- * migration 013) when a capability must never belong to an admin:
- * deleting/suspending another admin, transferring ownership, and
- * touching integrations/secrets.
+ * migration 013, or a later migration that rewrites it) when a
+ * capability must never belong to an admin: deleting/suspending
+ * another admin, transferring ownership, touching integrations/secrets,
+ * and viewing any user's contact details.
  */
 export const OWNER_ONLY_PERMISSIONS: PermissionKey[] = [
   "integrations:manage",
   "owner:access",
+  "contacts:read",
 ];
 
 /**
