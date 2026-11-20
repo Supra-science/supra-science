@@ -158,10 +158,9 @@ describe("code catalog == database seed (migrations 011 + 013 + 014)", () => {
     assert.match(sql, /SET role = 'owner'\s+WHERE user_id = 'd4ed169a-4cf9-4c84-b250-0d7d33ff65dc'/, "013 must promote the Proton admin to owner");
   });
 
-  it("migration 014 is a DRAFT that adds contacts:read as owner-only", () => {
+  it("migration 014 is applied and adds contacts:read as owner-only", () => {
     const sql = root("supabase/migrations/014_contacts_read.sql");
-    assert.match(sql, /DRAFT, NOT APPLIED/, "014 must be marked as a draft, never applied silently");
-    assert.match(sql, /DO NOT APPLY without the founder's explicit approval/, "014 must require the founder's approval");
+    assert.match(sql, /APPLIED 2026-11-20/, "014 must be marked as applied");
     assert.match(sql, /\('contacts:read', 'View contact details/, "014 must seed contacts:read");
     assert.match(sql, /NEW\.key NOT IN \('integrations:manage', 'owner:access', 'contacts:read'\)/, "014 trigger must skip all three owner-only keys for admin");
     assert.ok(

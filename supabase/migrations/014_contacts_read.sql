@@ -1,6 +1,7 @@
--- supabase/migrations/014_contacts_read.sql — DRAFT, NOT APPLIED
+-- supabase/migrations/014_contacts_read.sql — APPLIED 2026-11-20 20:00
 -- (founder order 2026-11-20: the platform owner may view the contact
--- details of every user — customers, staff and admins).
+-- details of every user — customers, staff and admins; deploy approved
+-- by his "موافق" the same evening).
 --
 -- One new permission, owner-only:
 --   contacts:read — view contact details (email, phone, company,
@@ -17,7 +18,6 @@
 -- exist for the new key yet, but the statement is written to cover all
 -- three so a re-run stays correct).
 -- Re-runnable (all statements idempotent).
--- DO NOT APPLY without the founder's explicit approval.
 
 -- --- 1. Auto-grant trigger FIRST: owner-only keys go to the owner only --
 -- (The trigger must be rewritten BEFORE the new permission is inserted
