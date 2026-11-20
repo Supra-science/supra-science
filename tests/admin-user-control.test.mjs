@@ -36,8 +36,8 @@ describe("admin user deletion — endpoint", () => {
 
   it("the platform owner account cannot be deleted", () => {
     const route = src("app/api/admin/users/route.ts");
-    assert.match(route, /ADMIN_EMAILS\.includes\(email\)/, "DELETE must check the allowlisted owner email");
-    assert.match(route, /Cannot delete the platform owner account/, "DELETE must refuse owner deletion");
+    assert.match(route, /role === "owner"\) \{\s+return NextResponse\.json\(\{ ok: false, error: "Cannot delete the platform owner account"/, "DELETE must refuse the owner role (not the email allowlist anymore)");
+    assert.doesNotMatch(route, /ADMIN_EMAILS\.includes\(email\)/, "DELETE must no longer check the email allowlist for the owner");
     assert.match(route, /admin\.auth\.admin\.getUserById\(userId\)/, "DELETE must fetch the target to learn its email");
   });
 
@@ -80,10 +80,10 @@ describe("admin user deletion — UI", () => {
     assert.match(actions, /blockers/, "button must surface the 409 blocker counts inline");
   });
 
-  it("users page offers deletion only on other users' rows", () => {
+  it("users page offers deletion only on other users' rows, never the owner's", () => {
     const page = src("app/admin/users/page.tsx");
     assert.match(page, /<DeleteUserButton/, "users page must render the delete button");
-    assert.match(page, /\{!isSelf && \(/, "delete button must be hidden on the admin's own row");
+    assert.match(page, /\{!isSelf && role !== "owner" && \(/, "delete button must be hidden on the admin's own row and on the owner's row");
     assert.match(page, /endpoint="\/api\/admin\/users"/, "delete button must target the users API");
     assert.match(page, /t\("deleteUser", lang\)/, "delete button must use the deleteUser label");
   });

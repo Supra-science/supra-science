@@ -87,6 +87,10 @@ export const STRINGS: Record<string, LocalizedString> = {
   customerQuotations: { ar: "عروض أسعار العميل", en: "Customer quotations" },
   customers: { ar: "العملاء", en: "Customers" },
   deleteUser: { ar: "إزالة المستخدم", en: "Remove user" },
+  suspendUser: { ar: "تعليق الحساب", en: "Suspend account" },
+  unsuspendUser: { ar: "إلغاء التعليق", en: "Unsuspend account" },
+  transferOwner: { ar: "نقل الملكية", en: "Transfer ownership" },
+  suspended: { ar: "معلّق", en: "Suspended" },
   dbNotConfigured: { ar: "تعذّر الوصول إلى قاعدة البيانات من هذا الخادم (مفتاح الخدمة غير مضبوط). ستظهر البيانات فور ضبطه — لا توجد بيانات وهمية هنا.", en: "Could not reach the database from this server (service key not set). Data will appear once it is configured — no demo data is shown here." },
   defaultClient: { ar: "عميل سوبرا-ساينس", en: "Supra-Science client" },
   description: { ar: "الوصف", en: "Description" },
@@ -240,7 +244,7 @@ export const STRINGS: Record<string, LocalizedString> = {
   updated: { ar: "حُدّث في", en: "Updated" },
   updating: { ar: "جارٍ التحديث…", en: "Updating…" },
   users: { ar: "المستخدمون والأدوار", en: "Users & roles" },
-  usersLead: { ar: "حسابات المنصة وأدوارها. تغيير الدور يمنح صلاحيات المدير أو يسحبها — لا يمكنك تغيير دورك أنت، ولا سحب دور آخر مدير. الإزالة نهائية: لا تحذف نفسك ولا آخر مدير ولا مالك المنصة، والمستخدم الذي لديه مشاريع أو عروض أو فواتير أو مدفوعات لا يُحذف حتى تُعالج سجلاته أولاً.", en: "Platform accounts and their roles. Changing a role grants or removes administrator rights — you cannot change your own role, nor remove the last administrator. Removal is permanent: you cannot delete yourself, the last administrator, or the platform owner, and a user with projects, quotations, invoices or payments cannot be deleted until their records are dealt with first." },
+  usersLead: { ar: "حسابات المنصة وأدوارها. تغيير الدور يمنح صلاحيات المدير أو يسحبها — لا يمكنك تغيير دورك أنت، ولا سحب دور آخر مدير. الإزالة نهائية: لا تحذف نفسك ولا آخر مدير ولا مالك المنصة، والمستخدم الذي لديه مشاريع أو عروض أو فواتير أو مدفوعات لا يُحذف حتى تُعالج سجلاته أولاً. التعليق بديل قابل للتراجع عن الإزالة: الحساب المعلّق لا يستطيع الدخول فوراً، ويمكن إلغاء تعليقه في أي وقت. نقل الملكية للمالك فقط، ولا تنتقل إلا إلى مدير.", en: "Platform accounts and their roles. Changing a role grants or removes administrator rights — you cannot change your own role, nor remove the last administrator. Removal is permanent: you cannot delete yourself, the last administrator, or the platform owner, and a user with projects, quotations, invoices or payments cannot be deleted until their records are dealt with first. Suspension is the reversible alternative to removal: a suspended account cannot sign in immediately, and the suspension can be lifted at any time. Ownership transfer is owner-only and moves only to an administrator." },
   validUntil: { ar: "صالح حتى", en: "Valid until" },
   viewDetails: { ar: "عرض التفاصيل", en: "View details" },
   welcome: { ar: "مرحباً،", en: "Welcome," },
@@ -260,8 +264,9 @@ export function formatDate(value: string, lang: Lang): string {
   return new Date(value).toLocaleDateString(lang === "ar" ? "ar-u-nu-latn" : "en-US");
 }
 
-/** Human role label: admin / staff / customer. */
+/** Human role label: owner / admin / staff / customer. */
 export function roleLabel(role: string, lang: Lang): string {
+  if (role === "owner") return lang === "ar" ? "مالك" : "Owner";
   if (role === "admin") return lang === "ar" ? "مدير" : "Admin";
   if (role === "staff") return lang === "ar" ? "موظف" : "Staff";
   return lang === "ar" ? "عميل" : "Customer";

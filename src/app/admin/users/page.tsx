@@ -7,6 +7,7 @@
 // identifies the signed-in admin.
 
 import { requireAdminPage, getServiceSupabase } from "@/lib/admin-page";
+import { hasPermission } from "@/lib/permissions";
 import { getLang } from "@/lib/lang-server";
 import { t, formatDate, roleLabel } from "@/lib/i18n";
 import { page, heading, card, row, gold, muted } from "@/lib/admin-styles";
@@ -17,9 +18,12 @@ export const dynamic = "force-dynamic";
 const ROLES = ["admin", "staff", "customer"];
 
 export default async function AdminUsers() {
-  const { user } = await requireAdminPage("users:manage");
+  const { user, supabase: sessionSupabase } = await requireAdminPage("users:manage");
   const lang = await getLang();
   const supabase = getServiceSupabase();
+  // Only the owner sees the transfer-ownership button (permission
+  // `owner:access` — the admin wildcard does not include it).
+  const isOwner = await hasPermission(sessionSupabase, user, "owner:access");
 
   if (!supabase) {
     return (
@@ -32,10 +36,14 @@ export default async function AdminUsers() {
 
   const [{ data: profiles }, { data: roles }] = await Promise.all([
     supabase.from("profiles").select("id, full_name, created_at").order("created_at", { ascending: false }).limit(200),
-    supabase.from("user_roles").select("user_id, role").limit(500),
+    supabase.from("user_roles").select("user_id, role, suspended_at").limit(500),
   ]);
   const roleByUser = new Map<string, string>();
-  for (const role of roles ?? []) roleByUser.set(String(role.user_id), String(role.role));
+  const suspendedByUser = new Map<string, boolean>();
+  for (const role of roles ?? []) {
+    roleByUser.set(String(role.user_id), String(role.role));
+    suspendedByUser.set(String(role.user_id), (role as { suspended_at?: string | null }).suspended_at != null);
+  }
 
   const users = (profiles ?? []) as { id: string; full_name: string | null; created_at: string }[];
 
@@ -49,6 +57,7 @@ export default async function AdminUsers() {
         {!users.length && <p style={muted}>{t("noData", lang)}</p>}
         {users.map((profile) => {
           const role = roleByUser.get(String(profile.id)) ?? "customer";
+          const isSuspended = suspendedByUser.get(String(profile.id)) ?? false;
           const isSelf = String(profile.id) === user.id;
           return (
             <div
@@ -71,13 +80,27 @@ export default async function AdminUsers() {
                     fontSize: 12,
                     padding: "2px 10px",
                     borderRadius: 10,
-                    background: role === "admin" ? "#fef3c7" : "#e5e7eb",
-                    color: role === "admin" ? "#6366F1" : "#39404d",
+                    background: role === "owner" ? "#0B132B" : role === "admin" ? "#fef3c7" : "#e5e7eb",
+                    color: role === "owner" ? "#FFD700" : role === "admin" ? "#6366F1" : "#39404d",
                   }}
                 >
                   {roleLabel(role, lang)}
                 </span>
+                {isSuspended && (
+                  <span
+                    style={{
+                      fontSize: 12,
+                      padding: "2px 10px",
+                      borderRadius: 10,
+                      background: "#fee2e2",
+                      color: "#dc2626",
+                    }}
+                  >
+                    {t("suspended", lang)}
+                  </span>
+                )}
                 {!isSelf &&
+                  role !== "owner" &&
                   ROLES.filter((r) => r !== role).map((r) => (
                     <AdminActionButton
                       key={r}
@@ -86,7 +109,37 @@ export default async function AdminUsers() {
                       label={`${t("changeRole", lang)}: ${roleLabel(r, lang)}`}
                     />
                   ))}
-                {!isSelf && (
+                {!isSelf && role !== "owner" && (
+                  <AdminActionButton
+                    endpoint={isSuspended ? "/api/admin/users/unsuspend" : "/api/admin/users/suspend"}
+                    method="POST"
+                    payload={{ user_id: String(profile.id) }}
+                    label={isSuspended ? t("unsuspendUser", lang) : t("suspendUser", lang)}
+                    confirmText={
+                      lang === "ar"
+                        ? isSuspended
+                          ? `إلغاء تعليق ${String(profile.full_name || profile.id)}؟ سيستطيع الدخول مجدداً فوراً.`
+                          : `تعليق حساب ${String(profile.full_name || profile.id)}؟ لن يستطيع الدخول فوراً، ويمكن إلغاء التعليق في أي وقت.`
+                        : isSuspended
+                          ? `Unsuspend ${String(profile.full_name || profile.id)}? They will be able to sign in again immediately.`
+                          : `Suspend ${String(profile.full_name || profile.id)}? They will be blocked from signing in immediately, and the suspension can be lifted at any time.`
+                    }
+                  />
+                )}
+                {isOwner && !isSelf && role === "admin" && (
+                  <AdminActionButton
+                    endpoint="/api/admin/users/transfer-owner"
+                    method="POST"
+                    payload={{ user_id: String(profile.id) }}
+                    label={t("transferOwner", lang)}
+                    confirmText={
+                      lang === "ar"
+                        ? `نقل ملكية المنصة إلى ${String(profile.full_name || profile.id)}؟ ستصبح أنت مديراً، وسيصبح هو المالك الوحيد. يمكنه نقلها إليك مجدداً بالطريقة نفسها.`
+                        : `Transfer platform ownership to ${String(profile.full_name || profile.id)}? You will become an administrator and they will become the sole owner. They can transfer it back the same way.`
+                    }
+                  />
+                )}
+                {!isSelf && role !== "owner" && (
                   <DeleteUserButton
                     endpoint="/api/admin/users"
                     userId={String(profile.id)}

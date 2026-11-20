@@ -16,11 +16,13 @@ type AdminActionButtonProps = {
   payload: Record<string, unknown>;
   label: string;
   confirmText?: string;
+  /** HTTP method — "PATCH" by default; suspend/unsuspend/transfer use "POST". */
+  method?: "PATCH" | "POST";
 };
 
-/** Generic admin button: PATCHes `payload` to `endpoint` (with an optional
+/** Generic admin button: PATCHes (or POSTs) `payload` to `endpoint` (with an optional
  *  window.confirm first), then refreshes the page. */
-export function AdminActionButton({ endpoint, payload, label, confirmText }: AdminActionButtonProps) {
+export function AdminActionButton({ endpoint, payload, label, confirmText, method = "PATCH" }: AdminActionButtonProps) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,7 +33,7 @@ export function AdminActionButton({ endpoint, payload, label, confirmText }: Adm
       setError(null);
       try {
         const res = await fetch(endpoint, {
-          method: "PATCH",
+          method,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });

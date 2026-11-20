@@ -122,6 +122,44 @@ async function checkStaffAccess(
 }
 
 /**
+ * Central suspended-account check (added 2026-11-20, Phase 3): a
+ * suspended user is refused everywhere that needs a session — the
+ * dashboard and the API — even where no role guard runs (their own
+ * customer data, customer APIs). The admin/staff guards above already
+ * deny them through hasPermission(); this covers the rest. Auth routes
+ * and the language toggle are excluded: a banned user cannot sign in
+ * anyway (Supabase rejects the sign-in), and the login page itself
+ * must stay reachable.
+ */
+async function checkSuspended(
+  request: NextRequest,
+): Promise<NextResponse | null> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  if (!url || !key) return null;
+  const supabase = createServerClient(url, key, {
+    cookies: {
+      getAll: () => request.cookies.getAll(),
+      setAll: () => {},
+    },
+  });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data } = await supabase
+    .from("user_roles")
+    .select("suspended_at")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (!data?.suspended_at) return null;
+  if (request.nextUrl.pathname.startsWith("/api/")) {
+    return NextResponse.json({ error: "Account suspended" }, { status: 401 });
+  }
+  return NextResponse.redirect(new URL("/login", request.url));
+}
+
+/**
  * Content-Security-Policy with a per-request nonce.
  * - script-src: no 'unsafe-inline', no 'unsafe-eval' (none used in src);
  *   'strict-dynamic' lets nonce-trusted scripts (incl. the reCAPTCHA
@@ -195,6 +233,23 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/api/staff/")
   ) {
     const denied = await checkStaffAccess(request);
+    if (denied) return denied;
+  }
+
+  // Suspended-account check (Phase 3): /dashboard and the API outside
+  // the admin/staff areas. /api/auth/* (sign-in itself) and /api/lang
+  // are excluded; /api/admin/* and /api/staff/* are already covered by
+  // the guards above.
+  if (
+    pathname === "/dashboard" ||
+    pathname.startsWith("/dashboard/") ||
+    (pathname.startsWith("/api/") &&
+      !pathname.startsWith("/api/auth/") &&
+      !pathname.startsWith("/api/admin/") &&
+      !pathname.startsWith("/api/staff/") &&
+      pathname !== "/api/lang")
+  ) {
+    const denied = await checkSuspended(request);
     if (denied) return denied;
   }
 

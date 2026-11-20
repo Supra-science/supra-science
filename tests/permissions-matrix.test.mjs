@@ -57,6 +57,9 @@ const MATRIX = {
   "app/api/admin/quotations/route.ts": ["quotations:status"],
   "app/api/admin/services/route.ts": ["services:read", "services:manage"],
   "app/api/admin/users/route.ts": ["users:manage", "users:delete"],
+  "app/api/admin/users/suspend/route.ts": ["users:suspend"],
+  "app/api/admin/users/unsuspend/route.ts": ["users:suspend"],
+  "app/api/admin/users/transfer-owner/route.ts": ["owner:access"],
   "app/api/admin/whatsapp/route.ts": ["whatsapp:manage"],
   "app/api/admin/whatsapp/send/route.ts": ["whatsapp:manage"],
   // --- staff API (status changes only — the three routes) ---
@@ -92,19 +95,18 @@ const MATRIX = {
   "app/staff/messages/page.tsx": ["messages:read"],
 };
 
-describe("code catalog == database seed (migration 011)", () => {
-  it("permissions.ts catalog and the 011 seed hold the same 27 keys", () => {
+describe("code catalog == database seed (migrations 011 + 013)", () => {
+  it("permissions.ts catalog and the 011 + 013 seeds hold the same 29 keys", () => {
     const code = src("lib/permissions.ts");
     const codeKeys = new Set([...code.matchAll(/^  "([a-z]+:[a-z]+)":/gm)].map((m) => m[1]));
-    const sql = root("supabase/migrations/011_permissions_draft.sql");
-    const seedBlock = sql.slice(
-      sql.indexOf("INSERT INTO public.permissions"),
-      sql.indexOf("ON CONFLICT (key)"),
+    const sql011 = root("supabase/migrations/011_permissions_draft.sql");
+    const sql013 = root("supabase/migrations/013_owner_role_and_suspend.sql");
+    const sqlKeys = new Set(
+      [...(sql011 + sql013).matchAll(/\('([a-z]+:[a-z]+)',/g)].map((m) => m[1]),
     );
-    const sqlKeys = new Set([...seedBlock.matchAll(/\('([a-z]+:[a-z]+)',/g)].map((m) => m[1]));
-    assert.equal(codeKeys.size, 27, `code catalog must hold 27 keys, got ${codeKeys.size}`);
-    assert.equal(sqlKeys.size, 27, `SQL seed must hold 27 keys, got ${sqlKeys.size}`);
-    assert.deepEqual([...codeKeys].sort(), [...sqlKeys].sort(), "code catalog and SQL seed must match exactly");
+    assert.equal(codeKeys.size, 29, `code catalog must hold 29 keys, got ${codeKeys.size}`);
+    assert.equal(sqlKeys.size, 29, `SQL seeds must hold 29 keys, got ${sqlKeys.size}`);
+    assert.deepEqual([...codeKeys].sort(), [...sqlKeys].sort(), "code catalog and SQL seeds must match exactly");
   });
 
   it("staff role rows match in code and SQL, customer holds nothing", () => {
@@ -134,6 +136,61 @@ describe("code catalog == database seed (migration 011)", () => {
     assert.match(sql, /ENABLE ROW LEVEL SECURITY/, "011 must enable RLS on the permission tables");
     assert.match(sql, /FOR SELECT TO authenticated USING \(true\)/, "011 must let authenticated users read the catalog");
     assert.doesNotMatch(sql, /FOR (INSERT|UPDATE|DELETE)/, "011 must grant no API writes (service_role only)");
+  });
+
+  it("migration 013 makes the owner a superset and keeps integrations owner-only", () => {
+    const sql = root("supabase/migrations/013_owner_role_and_suspend.sql");
+    assert.match(sql, /APPLIED 2026-11-20/, "013 must be marked as applied");
+    assert.match(sql, /'owner'::text/, "013 must add the owner role");
+    assert.match(sql, /suspended_at timestamptz/, "013 must add the suspension timestamp");
+    assert.match(sql, /role IN \('admin', 'owner'\)/, "013 is_admin must cover admin and owner");
+    assert.match(sql, /CREATE OR REPLACE FUNCTION public\.is_owner\(\)/, "013 must define is_owner");
+    assert.match(sql, /suspended_at IS NULL/, "013 role helpers must return false while suspended");
+    assert.match(sql, /NEW\.key NOT IN \('integrations:manage', 'owner:access'\)/, "013 trigger must skip owner-only keys for admin");
+    assert.ok(
+      sql.indexOf("CREATE OR REPLACE FUNCTION public.grant_permission_to_admin()") < sql.indexOf("('owner:access'"),
+      "013 must rewrite the trigger BEFORE inserting owner:access, or the old trigger grants it to the admin",
+    );
+    assert.match(sql, /VALUES \('owner', NEW\.key\)/, "013 trigger must grant every new key to the owner");
+    assert.match(sql, /SELECT 'owner', key FROM public\.permissions/, "013 must backfill the owner for existing keys");
+    assert.match(sql, /DELETE FROM public\.role_permissions\s+WHERE role = 'admin' AND permission_key IN \('integrations:manage', 'owner:access'\)/, "013 must remove the admin rows for the owner-only keys");
+    assert.match(sql, /SET role = 'owner'\s+WHERE user_id = 'd4ed169a-4cf9-4c84-b250-0d7d33ff65dc'/, "013 must promote the Proton admin to owner");
+  });
+});
+
+describe("owner-only rules in code", () => {
+  it("integrations:manage and owner:access are owner-only; admin holds the other 27", () => {
+    const code = src("lib/permissions.ts");
+    const ownerOnly = code.slice(code.indexOf("OWNER_ONLY_PERMISSIONS"), code.indexOf("];", code.indexOf("OWNER_ONLY_PERMISSIONS")));
+    assert.match(ownerOnly, /"integrations:manage"/, "integrations:manage must be owner-only");
+    assert.match(ownerOnly, /"owner:access"/, "owner:access must be owner-only");
+    assert.match(code, /if \(role === "owner"\) return true;/, "owner must be a wildcard");
+    assert.match(code, /if \(role === "admin"\) return !OWNER_ONLY_PERMISSIONS\.includes/, "admin must be a wildcard minus owner-only");
+  });
+
+  it("suspension voids every permission in hasPermission", () => {
+    const code = src("lib/permissions.ts");
+    assert.match(code, /if \(await isSuspendedUser\(supabase, user\)\) return false;/, "hasPermission must deny suspended users first");
+  });
+
+  it("middleware refuses suspended accounts on the dashboard and the API", () => {
+    const mw = root("middleware.ts");
+    assert.match(mw, /checkSuspended/, "middleware must have a suspended check");
+    assert.match(mw, /pathname === "\/dashboard"/, "middleware must check the dashboard");
+    assert.match(mw, /Account suspended/, "middleware must answer 401 for suspended API calls");
+  });
+
+  it("the users routes guard privileged targets with owner:access", () => {
+    const users = src("app/api/admin/users/route.ts");
+    assert.match(users, /role === "owner"\) \{\s+return NextResponse\.json\(\{ ok: false, error: "Cannot delete the platform owner account"/, "DELETE must refuse the owner");
+    assert.match(users, /role === "admin" && !\(await hasPermission\(auth\.supabase, auth\.user, "owner:access"\)\)/, "DELETE of an admin must need owner:access");
+    assert.match(users, /current\?\.role === "owner"\)/, "PATCH must refuse changing the owner's role");
+    const suspend = src("app/api/admin/users/suspend/route.ts");
+    assert.match(suspend, /ban_duration: "87600h"/, "suspend must place an Auth ban");
+    assert.match(suspend, /"suspend:user"/, "suspend must be audited");
+    const transfer = src("app/api/admin/users/transfer-owner/route.ts");
+    assert.match(transfer, /requireAdmin\("owner:access"\)/, "transfer-owner must be owner-only");
+    assert.match(transfer, /"transfer:owner"/, "transfer must be audited");
   });
 });
 

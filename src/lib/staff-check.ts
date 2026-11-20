@@ -26,10 +26,10 @@ export async function isStaffUser(
 }
 
 /**
- * True when the user is staff OR admin. Admin is a superset of staff:
- * an admin may use the staff workspace too. Use this (never isStaffUser
- * alone) for every staff-area guard so admins are not locked out of
- * the staff workspace.
+ * True when the user is staff OR admin OR owner. Owner is a superset of
+ * admin, admin a superset of staff: an admin or the owner may use the
+ * staff workspace too. Use this (never isStaffUser alone) for every
+ * staff-area guard so admins are not locked out of the staff workspace.
  */
 export async function isStaffOrAdminUser(
   supabase: SupabaseClient,
@@ -40,5 +40,5 @@ export async function isStaffOrAdminUser(
     .select("role")
     .eq("user_id", user.id)
     .maybeSingle();
-  return data?.role === "staff" || data?.role === "admin";
+  return data?.role === "staff" || data?.role === "admin" || data?.role === "owner";
 }

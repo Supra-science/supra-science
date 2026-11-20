@@ -40,6 +40,8 @@ const ADMIN_ONLY = [
   "admin:access",
   "users:manage",
   "users:delete",
+  "users:suspend",
+  "owner:access",
   "invoices:read",
   "invoices:manage",
   "payments:read",
@@ -57,9 +59,9 @@ const ADMIN_ONLY = [
 ];
 
 describe("permission catalog", () => {
-  it("holds exactly 27 permissions", () => {
-    assert.equal(ALL_PERMISSIONS.length, 27, "catalog size is a contract — update the matrix test too");
-    assert.equal(Object.keys(PERMISSIONS).length, 27);
+  it("holds exactly 29 permissions", () => {
+    assert.equal(ALL_PERMISSIONS.length, 29, "catalog size is a contract — update the matrix test too");
+    assert.equal(Object.keys(PERMISSIONS).length, 29);
     assert.deepEqual([...ALL_PERMISSIONS].sort(), Object.keys(PERMISSIONS).sort());
   });
 
@@ -80,9 +82,19 @@ describe("permission catalog", () => {
 });
 
 describe("roleHasPermission — the matrix, executed", () => {
-  it("admin holds every permission in the catalog (wildcard)", () => {
+  it("owner holds every permission in the catalog (wildcard)", () => {
     for (const key of ALL_PERMISSIONS) {
-      assert.equal(roleHasPermission("admin", key), true, `admin must hold ${key}`);
+      assert.equal(roleHasPermission("owner", key), true, `owner must hold ${key}`);
+    }
+  });
+
+  it("admin holds every permission except the owner-only ones", () => {
+    for (const key of ALL_PERMISSIONS) {
+      if (key === "integrations:manage" || key === "owner:access") {
+        assert.equal(roleHasPermission("admin", key), false, `admin must NOT hold owner-only ${key}`);
+      } else {
+        assert.equal(roleHasPermission("admin", key), true, `admin must hold ${key}`);
+      }
     }
   });
 
@@ -103,15 +115,15 @@ describe("roleHasPermission — the matrix, executed", () => {
     }
   });
 
-  it("fail-closed: unknown permission is denied for everyone, admin included", () => {
-    for (const role of ["admin", "staff", "customer"]) {
+  it("fail-closed: unknown permission is denied for everyone, owner included", () => {
+    for (const role of ["owner", "admin", "staff", "customer"]) {
       assert.equal(roleHasPermission(role, "projects:delete"), false, `${role} must be denied an unknown permission`);
       assert.equal(roleHasPermission(role, ""), false);
     }
   });
 
   it("fail-closed: unknown role holds nothing", () => {
-    for (const role of ["superadmin", "owner", "", "ADMIN"]) {
+    for (const role of ["superadmin", "", "ADMIN", "OWNER"]) {
       assert.equal(roleHasPermission(role, "projects:read"), false, `unknown role ${role} must hold nothing`);
       assert.equal(roleHasPermission(role, "admin:access"), false);
     }
@@ -119,19 +131,22 @@ describe("roleHasPermission — the matrix, executed", () => {
 });
 
 describe("getRolePermissions", () => {
-  it("admin gets the whole catalog, staff its 10, customer none", () => {
+  it("owner gets the whole catalog, admin the catalog minus owner-only, staff its 10, customer none", () => {
+    assert.equal(getRolePermissions("owner").length, 29);
     assert.equal(getRolePermissions("admin").length, 27);
+    assert.ok(!getRolePermissions("admin").includes("integrations:manage"));
+    assert.ok(!getRolePermissions("admin").includes("owner:access"));
     assert.deepEqual([...getRolePermissions("staff")].sort(), [...STAFF_EXPECTED].sort());
     assert.deepEqual(getRolePermissions("customer"), []);
   });
 });
 
 describe("resolveEffectiveRole — owner allowlist", () => {
-  it("the allowlisted owner email is admin in either case", () => {
-    assert.equal(resolveEffectiveRole("Supra-science@proton.me", null), "admin");
-    assert.equal(resolveEffectiveRole("supra-science@proton.me", null), "admin");
+  it("the allowlisted owner email is owner in either case", () => {
+    assert.equal(resolveEffectiveRole("Supra-science@proton.me", null), "owner");
+    assert.equal(resolveEffectiveRole("supra-science@proton.me", null), "owner");
     // Even with a customer role row, the allowlist wins.
-    assert.equal(resolveEffectiveRole("supra-science@proton.me", "customer"), "admin");
+    assert.equal(resolveEffectiveRole("supra-science@proton.me", "customer"), "owner");
   });
 
   it("otherwise the database role decides, unknown means customer", () => {

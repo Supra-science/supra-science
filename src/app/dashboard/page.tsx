@@ -18,8 +18,13 @@ export default async function DashboardPage() {
 
   const [{ data: profile }, { data: role }] = await Promise.all([
     supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle(),
-    supabase.from("user_roles").select("role").eq("user_id", user.id).maybeSingle(),
+    supabase.from("user_roles").select("role, suspended_at").eq("user_id", user.id).maybeSingle(),
   ]);
+
+  // Phase 3: a suspended account is sent back to the login page — the
+  // account cannot sign in again while suspended (Auth ban), and the
+  // middleware already refuses it on every guarded route.
+  if (role?.suspended_at) redirect("/login");
 
   // Link visibility is a permission decision, not a role comparison:
   // the allowlisted owner is an admin even with no role row. Admins see

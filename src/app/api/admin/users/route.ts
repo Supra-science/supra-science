@@ -2,15 +2,18 @@
 // Reconstructed from module 9814 in chunk
 // `.open-next/server-functions/default/.next/server/chunks/_1e8w9uuebtrcb._.js`.
 // PATCH { user_id, role } — admin only. Role must be admin / staff /
-// customer. Two guards: an admin cannot change their own role (403), and
-// the last remaining administrator cannot be demoted (403 — counted with
-// an exact head-count query). The role is upserted into user_roles on
-// user_id and the change is audited as `update:user_roles` with
+// customer. Guards: an admin cannot change their own role (403); the
+// owner role is never set here — ownership moves only through the
+// transfer-owner route (403); the owner's role cannot be changed here
+// (403); and the last remaining administrator cannot be demoted when
+// there is no owner to keep the platform administered (403 — counted
+// with an exact head-count query). The role is upserted into user_roles
+// on user_id and the change is audited as `update:user_roles` with
 // { from, to }.
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin, serviceSupabase, logAudit, errorMessage } from "@/lib/admin-auth";
-import { ADMIN_EMAILS } from "@/lib/admin-check";
+import { hasPermission } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +27,9 @@ export async function PATCH(req: NextRequest) {
     const userId = String(body.user_id ?? "");
     const role = String(body.role ?? "");
     if (!userId) return NextResponse.json({ ok: false, error: "user_id is required" }, { status: 400 });
+    if (role === "owner") {
+      return NextResponse.json({ ok: false, error: "Ownership moves only through the transfer-owner route" }, { status: 403 });
+    }
     if (!ROLES.includes(role)) return NextResponse.json({ ok: false, error: "invalid role" }, { status: 400 });
     if (userId === auth.user.id) {
       return NextResponse.json({ ok: false, error: "You cannot change your own role" }, { status: 403 });
@@ -37,9 +43,18 @@ export async function PATCH(req: NextRequest) {
       .maybeSingle();
     if (fetchError) throw fetchError;
 
+    // The owner role is never set by a role change — ownership moves
+    // only through POST /api/admin/users/transfer-owner.
+    if (current?.role === "owner") {
+      return NextResponse.json({ ok: false, error: "The owner's role can only change through ownership transfer" }, { status: 403 });
+    }
+
     if (current?.role === "admin" && role !== "admin") {
-      const { count } = await admin.from("user_roles").select("*", { count: "exact", head: true }).eq("role", "admin");
-      if ((count ?? 0) <= 1) {
+      const [{ count: adminCount }, { count: ownerCount }] = await Promise.all([
+        admin.from("user_roles").select("*", { count: "exact", head: true }).eq("role", "admin"),
+        admin.from("user_roles").select("*", { count: "exact", head: true }).eq("role", "owner"),
+      ]);
+      if ((adminCount ?? 0) <= 1 && (ownerCount ?? 0) === 0) {
         return NextResponse.json({ ok: false, error: "Cannot remove the last administrator" }, { status: 403 });
       }
     }
@@ -70,10 +85,15 @@ export async function PATCH(req: NextRequest) {
  *
  * Guards (in order):
  * 1. An admin cannot delete their own account (403).
- * 2. The allowlisted platform-owner email (ADMIN_EMAILS) cannot be
- *    deleted (403) — removing it would orphan the admin allowlist.
- * 3. The last remaining administrator cannot be deleted (403).
- * 4. Business-data block (409): deleting a user whose customers row has
+ * 2. The platform owner (role `owner`) can never be deleted (403) —
+ *    removing them would orphan the platform. Ownership moves only
+ *    through the transfer-owner route.
+ * 3. Deleting another ADMIN needs the owner (403 for a plain admin —
+ *    checked with `owner:access`); deleting a staff member or customer
+ *    stays an admin action (`users:delete`).
+ * 4. The last remaining administrator cannot be deleted when there is
+ *    no owner (403).
+ * 5. Business-data block (409): deleting a user whose customers row has
  *    projects, quotations, invoices, payments or consultations would
  *    silently wipe that business history — every one of those tables is
  *    ON DELETE CASCADE from customers, which is CASCADE from auth.users.
@@ -103,10 +123,6 @@ export async function DELETE(req: NextRequest) {
     if (!target.user) return NextResponse.json({ ok: false, error: "User not found" }, { status: 404 });
     const email = String(target.user.email ?? "");
 
-    if (ADMIN_EMAILS.includes(email)) {
-      return NextResponse.json({ ok: false, error: "Cannot delete the platform owner account" }, { status: 403 });
-    }
-
     const { data: current, error: fetchError } = await admin
       .from("user_roles")
       .select("role")
@@ -115,9 +131,21 @@ export async function DELETE(req: NextRequest) {
     if (fetchError) throw fetchError;
     const role = current?.role ?? "customer";
 
+    if (role === "owner") {
+      return NextResponse.json({ ok: false, error: "Cannot delete the platform owner account" }, { status: 403 });
+    }
+
+    // Only the owner may delete another admin.
+    if (role === "admin" && !(await hasPermission(auth.supabase, auth.user, "owner:access"))) {
+      return NextResponse.json({ ok: false, error: "Only the platform owner can delete an administrator" }, { status: 403 });
+    }
+
     if (role === "admin") {
-      const { count } = await admin.from("user_roles").select("*", { count: "exact", head: true }).eq("role", "admin");
-      if ((count ?? 0) <= 1) {
+      const [{ count: adminCount }, { count: ownerCount }] = await Promise.all([
+        admin.from("user_roles").select("*", { count: "exact", head: true }).eq("role", "admin"),
+        admin.from("user_roles").select("*", { count: "exact", head: true }).eq("role", "owner"),
+      ]);
+      if ((adminCount ?? 0) <= 1 && (ownerCount ?? 0) === 0) {
         return NextResponse.json({ ok: false, error: "Cannot remove the last administrator" }, { status: 403 });
       }
     }

@@ -6,20 +6,22 @@
 //   (e.g. `projects:status`). Roles are BUNDLES of permissions — the code
 //   never asks "is this user staff?", it asks "may this user do X?" via
 //   roleHasPermission() / hasPermission().
-// - `admin` is a wildcard: an admin holds EVERY permission in the catalog,
-//   including ones added later. Staff and customer hold exactly the rows
-//   in ROLE_PERMISSIONS — nothing more. An unknown role or an unknown
-//   permission key is always DENIED (fail-closed, even for admins), so a
-//   typo in a guard can never silently grant access.
+// - `owner` is a wildcard: the owner holds EVERY permission in the
+//   catalog, including ones added later. `admin` is a wildcard MINUS the
+//   owner-only permissions (OWNER_ONLY_PERMISSIONS below): an admin holds
+//   every permission except those, including ones added later. Staff and
+//   customer hold exactly the rows in ROLE_PERMISSIONS — nothing more.
+//   An unknown role or an unknown permission key is always DENIED
+//   (fail-closed, even for the owner), so a typo in a guard can never
+//   silently grant access.
 // - This module is the runtime-enforced catalog. The database twin lives
-//   in supabase/migrations/011_permissions_draft.sql (DRAFT, not applied)
-//   with the identical seed — tests/permissions-matrix.test.mjs asserts
-//   the two can never drift apart.
-// - Role identity still comes from the existing primitives
-//   (isAdminUser / isStaffUser): hasPermission() asks them in order, so
-//   the allowlisted owner email keeps working exactly as before. That
-//   costs one extra role lookup for non-admins; correctness first — the
-//   same request already pays for a role lookup in the page guard.
+//   in supabase/migrations/011_permissions_draft.sql (APPLIED 2026-11-20)
+//   plus 013_owner_role_and_suspend.sql — tests/permissions-matrix.test.mjs
+//   asserts the two can never drift apart.
+// - Role identity comes from the role primitives (isOwnerUser /
+//   isAdminUser / isStaffUser): hasPermission() asks them in order, so
+//   the allowlisted owner email keeps working exactly as before. A
+//   suspended user holds NO permission (checked first in hasPermission).
 // - Edge-safe: only `import type` from @supabase/supabase-js plus two
 //   value imports from sibling lib modules that themselves import
 //   nothing at runtime. Safe to import from middleware.ts.
@@ -30,10 +32,10 @@ import type { SupabaseClient, User } from "@supabase/supabase-js";
 // stripping) so tests/permissions-runtime.test.mjs can execute the real
 // resolver instead of only parsing its source. TypeScript and Next.js
 // both resolve explicit `.ts` extensions.
-import { ADMIN_EMAILS, isAdminUser } from "./admin-check.ts";
+import { ADMIN_EMAILS, isAdminUser, isOwnerUser, isSuspendedUser } from "./admin-check.ts";
 import { isStaffUser } from "./staff-check.ts";
 
-export type Role = "admin" | "staff" | "customer";
+export type Role = "owner" | "admin" | "staff" | "customer";
 
 export type PermissionKey =
   | "admin:access"
@@ -57,6 +59,8 @@ export type PermissionKey =
   | "services:manage"
   | "users:manage"
   | "users:delete"
+  | "users:suspend"
+  | "owner:access"
   | "notifications:read"
   | "notifications:status"
   | "drafts:manage"
@@ -87,6 +91,8 @@ export const PERMISSIONS: Record<PermissionKey, string> = {
   "services:manage": "Create, update and delete services",
   "users:manage": "Change user roles",
   "users:delete": "Permanently remove users",
+  "users:suspend": "Suspend or unsuspend a user account",
+  "owner:access": "Owner-only actions: transfer ownership, delete or suspend an admin, manage integrations",
   "notifications:read": "View notifications",
   "notifications:status": "Change notification status",
   "drafts:manage": "Manage architecture drafts",
@@ -101,13 +107,27 @@ export const ALL_PERMISSIONS: PermissionKey[] = Object.keys(
 ) as PermissionKey[];
 
 /**
- * What each non-admin role holds. Admin is NOT listed here: an admin
- * holds every permission by the wildcard in roleHasPermission(), so a
- * permission added later is automatically an admin permission too.
- * Customer holds nothing in this catalog — the customer dashboard is
- * gated by role, not by these permissions.
+ * Owner-only permissions. The admin wildcard does NOT include these —
+ * only the owner holds them. Add a key here (and to the DB trigger in
+ * migration 013) when a capability must never belong to an admin:
+ * deleting/suspending another admin, transferring ownership, and
+ * touching integrations/secrets.
  */
-export const ROLE_PERMISSIONS: Record<Exclude<Role, "admin">, PermissionKey[]> = {
+export const OWNER_ONLY_PERMISSIONS: PermissionKey[] = [
+  "integrations:manage",
+  "owner:access",
+];
+
+/**
+ * What each non-admin, non-owner role holds. Owner and admin are NOT
+ * listed here: the owner holds every permission and the admin holds
+ * every permission except OWNER_ONLY_PERMISSIONS (see
+ * roleHasPermission()), so a permission added later is automatically an
+ * owner/admin permission too (unless it is owner-only). Customer holds
+ * nothing in this catalog — the customer dashboard is gated by role,
+ * not by these permissions.
+ */
+export const ROLE_PERMISSIONS: Record<Exclude<Role, "owner" | "admin">, PermissionKey[]> = {
   staff: [
     "staff:access",
     "projects:read",
@@ -128,31 +148,35 @@ export function isPermissionKey(value: string): value is PermissionKey {
   return value in PERMISSIONS;
 }
 
-/** The permissions a role holds (admin: the whole catalog). */
+/** The permissions a role holds (owner: the whole catalog; admin: the whole catalog minus owner-only). */
 export function getRolePermissions(role: Role): PermissionKey[] {
-  if (role === "admin") return [...ALL_PERMISSIONS];
+  if (role === "owner") return [...ALL_PERMISSIONS];
+  if (role === "admin") {
+    return ALL_PERMISSIONS.filter((key) => !OWNER_ONLY_PERMISSIONS.includes(key));
+  }
   return [...(ROLE_PERMISSIONS[role] ?? [])];
 }
 
 /**
  * Pure permission check. Fail-closed: an unknown permission key is
- * denied for EVERYONE (including admins — a typo must never grant
+ * denied for EVERYONE (including the owner — a typo must never grant
  * access), and an unknown role holds nothing.
  */
 export function roleHasPermission(role: string, permission: string): boolean {
   if (!isPermissionKey(permission)) return false;
-  if (role === "admin") return true;
+  if (role === "owner") return true;
+  if (role === "admin") return !OWNER_ONLY_PERMISSIONS.includes(permission as PermissionKey);
   if (role !== "staff" && role !== "customer") return false;
   return ROLE_PERMISSIONS[role].includes(permission);
 }
 
 /**
  * Resolve a user's effective role from their email and their user_roles
- * row — without a database call. The allowlisted owner email is an
- * admin even with no role row (matched case-insensitively: the stored
- * auth email is lowercase while the allowlist constant is capitalised —
- * a case-sensitive match would silently drop the owner if the role row
- * were ever deleted).
+ * row — without a database call. The allowlisted owner email is the
+ * platform owner even with no role row (matched case-insensitively: the
+ * stored auth email is lowercase while the allowlist constant is
+ * capitalised — a case-sensitive match would silently drop the owner if
+ * the role row were ever deleted).
  */
 export function resolveEffectiveRole(
   email: string | null | undefined,
@@ -162,34 +186,39 @@ export function resolveEffectiveRole(
     email &&
     ADMIN_EMAILS.some((allowed) => allowed.toLowerCase() === email.toLowerCase())
   ) {
-    return "admin";
+    return "owner";
   }
-  if (dbRole === "admin" || dbRole === "staff" || dbRole === "customer") return dbRole;
+  if (dbRole === "owner" || dbRole === "admin" || dbRole === "staff" || dbRole === "customer") return dbRole;
   return "customer";
 }
 
 /**
  * The user's effective role, resolved with one database lookup chain
- * through the existing role primitives. Admin first (one lookup for
- * admins), then staff — a customer pays for two lookups, which is the
- * same cost the page guard already pays.
+ * through the existing role primitives. Owner first (one lookup for the
+ * owner), then admin, then staff — a customer pays for three lookups,
+ * which is the same cost the page guard already pays.
  */
 export async function getEffectiveRole(
   supabase: SupabaseClient,
   user: User,
 ): Promise<Role> {
+  if (await isOwnerUser(supabase, user)) return "owner";
   if (await isAdminUser(supabase, user)) return "admin";
   if (await isStaffUser(supabase, user)) return "staff";
   return "customer";
 }
 
-/** True when the user may exercise `permission`. */
+/**
+ * True when the user may exercise `permission`. A suspended user holds
+ * NO permission — checked first, before the role resolution.
+ */
 export async function hasPermission(
   supabase: SupabaseClient,
   user: User,
   permission: string,
 ): Promise<boolean> {
   if (!isPermissionKey(permission)) return false;
+  if (await isSuspendedUser(supabase, user)) return false;
   const role = await getEffectiveRole(supabase, user);
   return roleHasPermission(role, permission);
 }
