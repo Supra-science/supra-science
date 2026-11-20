@@ -23,6 +23,7 @@ export async function GET() {
     { ar: "/ar/contact", en: "/en/contact", priority: "0.8", changefreq: "monthly" },
     { ar: "/ar/start", en: "/en/start", priority: "0.8", changefreq: "monthly" },
     { ar: "/ar/book", en: "/en/book", priority: "0.8", changefreq: "monthly" },
+    { ar: "/ar/links", en: "/en/links", priority: "0.5", changefreq: "monthly" },
     { ar: "/ar/privacy", en: "/en/privacy", priority: "0.3", changefreq: "yearly" },
     { ar: "/ar/terms", en: "/en/terms", priority: "0.3", changefreq: "yearly" },
     { ar: "/ar/refund", en: "/en/refund", priority: "0.3", changefreq: "yearly" },
