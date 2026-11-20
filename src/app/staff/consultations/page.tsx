@@ -4,7 +4,7 @@
 // Staff may schedule and complete consultations; creating or deleting
 // them stays with the customer/admin flow.
 
-import { requireStaffPage, getServiceSupabase } from "@/lib/staff-page";
+import { requireStaffPage } from "@/lib/staff-page";
 import { getLang } from "@/lib/lang-server";
 import { t, formatDate, statusLabel } from "@/lib/i18n";
 import { page, heading, card, row, muted } from "@/lib/admin-styles";
@@ -16,18 +16,9 @@ export const dynamic = "force-dynamic";
 const STATUSES = ["pending", "scheduled", "completed", "cancelled"];
 
 export default async function StaffConsultations() {
-  await requireStaffPage("consultations:read");
+  // Phase 2 (2026-11-20): reads use the caller\'s own session — RLS (migration 010) enforces the boundaries.
+  const { supabase } = await requireStaffPage("consultations:read");
   const lang = await getLang();
-  const supabase = getServiceSupabase();
-
-  if (!supabase) {
-    return (
-      <main style={page}>
-        <h1 style={heading}>{t("consultations", lang)}</h1>
-        <p style={{ ...card, border: "1px solid #a33", marginTop: 16 }}>{t("dbNotConfigured", lang)}</p>
-      </main>
-    );
-  }
 
   const labels: Record<string, string> = {};
   for (const status of STATUSES) labels[status] = statusLabel(status, lang);

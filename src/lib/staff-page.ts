@@ -4,12 +4,16 @@
 // redirects — /login when signed out, /dashboard when signed in but
 // neither staff nor admin. Used at the top of every staff page and in
 // the staff layout, mirroring src/lib/admin-page.ts.
+//
+// Phase 2 (2026-11-20): staff pages must NOT use the service_role
+// client — they read through the session client returned by
+// requireStaffPage, so RLS (migration 010) enforces the boundaries.
+// The getServiceSupabase re-export was removed deliberately; admin
+// pages keep importing it from @/lib/admin-page.
 
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { requirePermissionPage } from "@/lib/permission-check";
 import type { PermissionKey } from "@/lib/permissions";
-
-export { getServiceSupabase } from "@/lib/admin-page";
 
 /**
  * Page guard for staff Server Components. Redirects to /login when there

@@ -17,5 +17,6 @@ export async function PATCH(req: NextRequest) {
     allowedStatuses: ["new", "read", "replied", "archived"],
     entity: "contact_message",
     authFn: () => requireStaff("messages:status"),
+    useSessionClient: true,
   });
 }

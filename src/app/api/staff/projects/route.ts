@@ -27,5 +27,6 @@ export async function PATCH(req: NextRequest) {
     ],
     entity: "project",
     authFn: () => requireStaff("projects:status"),
+    useSessionClient: true,
   });
 }

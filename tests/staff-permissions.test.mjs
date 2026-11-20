@@ -131,7 +131,7 @@ describe("staff scope — operations yes, money and admin no", () => {
     const update = src("lib/admin-update.ts");
     assert.match(update, /authFn\?:/, "shared handler must accept an auth override");
     assert.match(update, /options\.authFn \?\? requireAdmin/, "shared handler must default to the admin guard");
-    assert.match(update, /logAudit\(admin, actorId, `update:\$\{options\.table\}`/, "every update must write an audit row");
+    assert.match(update, /logAudit\(serviceSupabase\(\), actorId, `update:\$\{options\.table\}`/, "every update must write an audit row");
   });
 });
 
@@ -143,13 +143,13 @@ describe("staff entry point and RLS draft", () => {
     assert.match(dash, /t\("openStaff", lang\)/, "dashboard must use the openStaff label");
   });
 
-  it("RLS migration draft exists, is marked draft, and stays scoped", () => {
+  it("RLS migration 010 is applied (Phase 2) and stays scoped", () => {
     const draftPath = join(ROOT, "supabase/migrations/010_staff_rls_draft.sql");
-    assert.ok(existsSync(draftPath), "migration draft file must exist");
+    assert.ok(existsSync(draftPath), "migration file must exist");
     const draft = readFileSync(draftPath, "utf8");
-    assert.match(draft, /DRAFT ONLY, NOT APPLIED/, "draft must be marked as not applied");
-    assert.match(draft, /create or replace function public\.is_staff\(\)/, "draft must define is_staff()");
-    assert.match(draft, /Staff can view projects/, "draft must grant staff read on projects");
-    assert.doesNotMatch(draft, /on public\.(invoices|payments|user_roles|audit_logs)/, "draft must grant staff nothing on money/admin tables");
+    assert.match(draft, /APPLIED 2026-11-20 \(Phase 2/, "migration must be marked applied in Phase 2");
+    assert.match(draft, /create or replace function public\.is_staff\(\)/, "migration must define is_staff()");
+    assert.match(draft, /Staff can view projects/, "migration must grant staff read on projects");
+    assert.doesNotMatch(draft, /on public\.(invoices|payments|user_roles|audit_logs)/, "migration must grant staff nothing on money/admin tables");
   });
 });

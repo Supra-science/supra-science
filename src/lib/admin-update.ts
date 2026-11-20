@@ -12,6 +12,7 @@
 // below is exact.
 
 import { NextRequest, NextResponse } from "next/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireAdmin, serviceSupabase, logAudit, errorMessage } from "@/lib/admin-auth";
 import { requireStaff } from "@/lib/staff-auth";
 
@@ -38,6 +39,14 @@ export type AdminUpdateOptions = {
     | { user: { id: string } }
     | { error: NextResponse }
   >;
+  /**
+   * When true, the business-table update runs with the caller's own
+   * session client (RLS enforced) instead of service_role. Staff routes
+   * pass true (Phase 2, 2026-11-20); admin routes keep the default
+   * service_role. The audit insert ALWAYS uses service_role: audit_logs
+   * has no staff INSERT policy and stays append-only.
+   */
+  useSessionClient?: boolean;
 };
 
 /**
@@ -71,8 +80,12 @@ export async function handleAdminStatusUpdate(req: NextRequest, options: AdminUp
       return NextResponse.json({ ok: false, error: "nothing to update" }, { status: 400 });
     }
 
-    const admin = serviceSupabase();
-    const { data, error } = await admin
+    const sessionClient = (auth as { supabase?: SupabaseClient }).supabase;
+    // Phase 2: staff updates run as the caller's own session so RLS
+    // (migration 010) enforces the table boundaries; the audit insert
+    // always stays on service_role (see useSessionClient above).
+    const db = options.useSessionClient && sessionClient ? sessionClient : serviceSupabase();
+    const { data, error } = await db
       .from(options.table)
       .update(patch)
       .eq(options.idField ?? "id", id)
@@ -80,7 +93,7 @@ export async function handleAdminStatusUpdate(req: NextRequest, options: AdminUp
       .single();
     if (error) throw error;
 
-    await logAudit(admin, actorId, `update:${options.table}`, options.entity, id, patch);
+    await logAudit(serviceSupabase(), actorId, `update:${options.table}`, options.entity, id, patch);
     return NextResponse.json({ ok: true, row: data });
   } catch (e) {
     const msg = errorMessage(e);

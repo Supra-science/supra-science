@@ -5,7 +5,7 @@
 // /api/staff/quotations route.
 
 import Link from "next/link";
-import { requireStaffPage, getServiceSupabase } from "@/lib/staff-page";
+import { requireStaffPage } from "@/lib/staff-page";
 import { getLang } from "@/lib/lang-server";
 import { t, formatDate, statusLabel } from "@/lib/i18n";
 import { page, heading, card, row, gold, muted, formatMoney } from "@/lib/admin-styles";
@@ -14,19 +14,10 @@ import { StatusBadge } from "@/components/status-badge";
 export const dynamic = "force-dynamic";
 
 export default async function StaffQuotations({ searchParams }: { searchParams: Promise<{ id?: string }> }) {
-  await requireStaffPage("quotations:read");
+  // Phase 2 (2026-11-20): reads use the caller\'s own session — RLS (migration 010) enforces the boundaries.
+  const { supabase } = await requireStaffPage("quotations:read");
   const lang = await getLang();
-  const supabase = getServiceSupabase();
   const { id } = await searchParams;
-
-  if (!supabase) {
-    return (
-      <main style={page}>
-        <h1 style={heading}>{t("quotations", lang)}</h1>
-        <p style={{ ...card, border: "1px solid #a33", marginTop: 16 }}>{t("dbNotConfigured", lang)}</p>
-      </main>
-    );
-  }
 
   if (id) {
     const { data: q } = await supabase

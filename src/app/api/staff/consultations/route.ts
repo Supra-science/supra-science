@@ -17,5 +17,6 @@ export async function PATCH(req: NextRequest) {
     entity: "consultation",
     extraFields: ["scheduled_at"],
     authFn: () => requireStaff("consultations:status"),
+    useSessionClient: true,
   });
 }

@@ -4,7 +4,7 @@
 // figures (no invoices/payments) by design.
 
 import Link from "next/link";
-import { requireStaffPage, getServiceSupabase } from "@/lib/staff-page";
+import { requireStaffPage } from "@/lib/staff-page";
 import { getLang } from "@/lib/lang-server";
 import { t } from "@/lib/i18n";
 import { page, heading, card, muted } from "@/lib/admin-styles";
@@ -12,18 +12,9 @@ import { page, heading, card, muted } from "@/lib/admin-styles";
 export const dynamic = "force-dynamic";
 
 export default async function StaffOverview() {
-  await requireStaffPage("staff:access");
+  // Phase 2 (2026-11-20): reads use the caller\'s own session — RLS (migration 010) enforces the boundaries.
+  const { supabase } = await requireStaffPage("staff:access");
   const lang = await getLang();
-  const supabase = getServiceSupabase();
-
-  if (!supabase) {
-    return (
-      <main style={page}>
-        <h1 style={heading}>{t("staffWorkspace", lang)}</h1>
-        <p style={{ ...card, border: "1px solid #a33", marginTop: 16 }}>{t("dbNotConfigured", lang)}</p>
-      </main>
-    );
-  }
 
   const [{ count: openProjects }, { count: newMessages }, { count: pendingConsultations }, { count: customers }] =
     await Promise.all([

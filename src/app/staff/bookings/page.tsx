@@ -3,7 +3,7 @@
 // calendar events); changing them stays admin-only, so there is
 // deliberately no StatusChanger and no /api/staff/bookings route.
 
-import { requireStaffPage, getServiceSupabase } from "@/lib/staff-page";
+import { requireStaffPage } from "@/lib/staff-page";
 import { getLang } from "@/lib/lang-server";
 import { t, formatDate } from "@/lib/i18n";
 import { page, heading, card, row, muted } from "@/lib/admin-styles";
@@ -12,21 +12,12 @@ import { StatusBadge } from "@/components/status-badge";
 export const dynamic = "force-dynamic";
 
 export default async function StaffBookings() {
-  await requireStaffPage("bookings:read");
+  // Phase 2 (2026-11-20): reads use the caller\'s own session — RLS (migration 010) enforces the boundaries.
+  const { supabase } = await requireStaffPage("bookings:read");
   const lang = await getLang();
-  const supabase = getServiceSupabase();
-
-  if (!supabase) {
-    return (
-      <main style={page}>
-        <h1 style={heading}>{t("bookings", lang)}</h1>
-        <p style={{ ...card, border: "1px solid #a33", marginTop: 16 }}>{t("dbNotConfigured", lang)}</p>
-      </main>
-    );
-  }
 
   const { data } = await supabase
-    .from("bookings")
+    .from("consultation_bookings")
     .select("id, name, email, phone, topic, service_slug, scheduled_at, calendar_event_id, meet_link, status, email_sent, created_at")
     .order("created_at", { ascending: false })
     .limit(100);

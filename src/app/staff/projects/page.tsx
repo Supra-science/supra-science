@@ -5,7 +5,7 @@
 // the status changer posts to /api/staff/projects (staff guard, audited).
 
 import Link from "next/link";
-import { requireStaffPage, getServiceSupabase } from "@/lib/staff-page";
+import { requireStaffPage } from "@/lib/staff-page";
 import { getLang } from "@/lib/lang-server";
 import { t, formatDate, statusLabel } from "@/lib/i18n";
 import { page, heading, card, row, gold, muted, formatMoney } from "@/lib/admin-styles";
@@ -28,19 +28,10 @@ type ProjectRow = {
 };
 
 export default async function StaffProjects({ searchParams }: { searchParams: Promise<{ id?: string }> }) {
-  await requireStaffPage("projects:read");
+  // Phase 2 (2026-11-20): reads use the caller\'s own session — RLS (migration 010) enforces the boundaries.
+  const { supabase } = await requireStaffPage("projects:read");
   const lang = await getLang();
-  const supabase = getServiceSupabase();
   const { id } = await searchParams;
-
-  if (!supabase) {
-    return (
-      <main style={page}>
-        <h1 style={heading}>{t("projects", lang)}</h1>
-        <p style={{ ...card, border: "1px solid #a33", marginTop: 16 }}>{t("dbNotConfigured", lang)}</p>
-      </main>
-    );
-  }
 
   const labels: Record<string, string> = {};
   for (const status of STATUSES) labels[status] = statusLabel(status, lang);
